@@ -98,7 +98,7 @@ tbody td{padding:9px 12px;color:var(--tx);vertical-align:middle;max-width:200px;
 .ficha-mat{font-size:12px;color:rgba(255,255,255,.7);font-family:var(--mo);margin-top:2px}
 .ficha-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:.5rem}
 .ficha-body{display:flex;overflow:hidden;height:calc(100vh - 64px - 85px)}
-.ficha-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1.25rem}
+.ficha-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem .85rem;margin-bottom:1.25rem;align-items:start}
 .ficha-field{background:rgba(8,12,20,.6);border:1px solid rgba(78,173,243,.12);border-radius:var(--r2);padding:.65rem .85rem;transition:border .2s}.ficha-field:hover{border-color:rgba(78,173,243,.3)}
 .ficha-label{font-size:9px;font-weight:700;color:var(--c2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem}
 .ficha-value{font-size:13px;color:var(--tx);font-weight:500}
@@ -311,17 +311,20 @@ thead th{background:rgba(0,32,96,.6);backdrop-filter:blur(8px)}
 <div class="notif" id="notif"></div>
 
 <!-- Firebase SDK (compat - funciona sin bundler) -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"
+  onerror="console.error('[CRM] Error cargando Firebase App SDK — verifica conexión a internet')"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"
+  onerror="console.error('[CRM] Error cargando Firebase Auth SDK')"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"
+  onerror="console.error('[CRM] Error cargando Firebase Firestore SDK')"></script>
 <script>
 
 // ═══ CATÁLOGOS FIJOS ═══
 const PLAN_ING={"MADM0M18": "No", "MADM0E12": "No", "MADM0E18": "No", "MADN0M12": "No", "MADM0M12": "No", "MADM0E11": "No", "LADE0E21": "No", "LADE0M21": "No", "LADE0V17": "No", "LADE0V16": "No", "LADE0E16": "No", "LADE0M16": "No", "LAET0V16": "No", "LAET0V17": "No", "LADT0E16": "No", "LADT0M16": "No", "MAHO0E18": "No", "MADN0V13": "No", "MADN0V18": "No", "MAPI0E12": "No", "MAPI0M18": "No", "MAPI0E11": "No", "MARH0E11": "No", "MACH0E04": "No", "MARH0E18": "No", "DEDU0M18": "No", "LARQ0E16": "No", "LARQ0M16": "No", "LAQT0E18": "No", "LAQT0M18": "No", "LARQ0E17": "No", "LCIC0E16": "No", "LCIC0M16": "No", "LCED0V17": "No", "LCED0V16": "No", "LCED0M16": "No", "LCED0E16": "No", "MCED0E12": "No", "MCED0E11": "No", "MCED0M18": "No", "MEDI0E11": "No", "LEPE0M16": "No", "LEPE0E16": "No", "LECS0E16": "No", "LECS0M16": "No", "LCIN0V17": "No", "LCIN0V16": "No", "LCOI0E16": "No", "LCOI0M16": "No", "LCOI0E21": "No", "LCOI0M21": "No", "LCIP0V17": "No", "LCOI0M18": "No", "LCIN0E18": "No", "LCIN0M18": "No", "LCOP0M16": "No", "LCON0V17": "No", "LCON0V16": "No", "LCOP0M21": "No", "LCOP0V16": "No", "LCOP0E16": "No", "LCRI0V17": "No", "LCRI0E16": "No", "LCRI0M16": "No", "LCRI0M17": "No", "LCRI0V16": "No", "MCRI0E14": "No", "MCRI0E16": "No", "LDER0V16": "No", "LDER0V17": "No", "LDER0E16": "No", "LDER0M16": "No", "MDCA0E11": "No", "LDAI0E16": "No", "LDAI0M16": "No", "LDAD0E16": "No", "LDAD0M16": "No", "LDGD0E16": "No", "LDGD0M16": "No", "LDGD0E17": "No", "LDGD0M17": "No", "MDCN0V18": "No", "MDOC0V13": "No", "MDES0M13": "No", "DDAD0V22": "No", "DADI0V24": "No", "DEDU0V18": "No", "DEDU0V24": "No", "LELX0M19": "Si", "LELE0M18": "Si", "LELX0E19": "Si", "LEFD0M19": "No", "LEDP0E19": "No", "DEDU0V17": "No", "LEFM0M19": "Si", "LENF0E17": "Si", "LENF0E24": "Si", "LEFE0E19": "Si", "LENF0E16": "Si", "MEST0E11": "No", "MFIN0E12": "No", "MFIN0E16": "No", "MFIE0E11": "No", "LFIS0E12": "Si", "LGAS0E16": "No", "LGAS0M16": "No", "LGAP0V16": "No", "LGAS0V16": "No", "LGAS0N16": "No", "MGEE0V13": "No", "MGED0V18": "No", "MGLOM018": "No", "LINF0M16": "No", "LIIL0M18": "No", "LIIA0E18": "No", "LIIA0M18": "No", "LICV0E16": "No", "LICV0V16": "No", "LICI0E16": "No", "LICI0M16": "No", "LIMI0M16": "No", "LIMI0M21": "No", "LMET0E16": "No", "LMET0M16": "No", "LRED0M16": "No", "LRED0E16": "No", "LIRC0M16": "No", "LISC0V17": "No", "LISC0V16": "No", "LISC0E21": "No", "LISC0M21": "No", "LISC0M16": "No", "LISC0E16": "No", "LIID0V17": "No", "LINI0M16": "No", "LIID0V16": "No", "LINI0E16": "No", "LINI0E21": "No", "LINI0M21": "No", "LIIP0V17": "No", "LIND0M18": "No", "MJOR0M16": "No", "LEMP0E24": "No", "LAET0V24": "No", "LACD0V24": "No", "LADE0M24": "No", "LAET0E24": "No", "LADT0M21": "No", "LEMP0V24": "No", "LCDE0E21": "No", "LCDE0M21": "No", "LCOM0M24": "No", "LCOM0E24": "No", "LCOM0V24": "No", "LCPU0M24": "No", "LCPU0V24": "No", "LCOP0E24": "No", "LCRI0E21": "No", "LCRI0M21": "No", "LDER0E21": "No", "LDER0M21": "No", "LENF0E25": "Si", "LENF0E19": "Si", "LFIN0V24": "No", "LFIS0E22": "Si", "LGAS0E24": "No", "LGAS0M24": "No", "LHIS0V25": "No", "LCIV0V24": "No", "LCIV0M24": "No", "LCIV0E24": "No", "LIMC0V16": "No", "LINI0M24": "No", "LINI0E24": "No", "LINI0V24": "No", "LIYF0V24": "Si", "LSTO0E25": "Si", "LSTO0E22": "Si", "LMDI0M24": "No", "LMDI0E24": "No", "LMDI0V24": "No", "LMER0V24": "No", "LMKT0V16": "No", "LNUT0E24": "Si", "LNUT0E25": "Si", "LNUT0E23": "Si", "LPED0V17": "No", "LPSI0M23": "Si", "LPSI0M25": "Si", "LPCL0E12": "Si", "LRTF0E22": "Si", "LNUT0E22": "Si", "MAHO0V18": "No", "MNEG0M21": "No", "MAHO0M21": "No", "MIED0M21": "No", "MADH0V21": "No", "MACH0V25": "No", "MNEG0V22": "No", "MADI0V22": "No", "MDCI0V25": "No", "MDCA0V25": "No", "MDCN0V22": "No", "MEIA0V24": "No", "MFIN0V22": "No", "MITE0V22": "No", "LMES0E22": "Si", "LMER0V17": "No", "LMER0V16": "No", "LMER0M16": "No", "LMER0E16": "No", "LMER0M21": "No", "LMEP0V17": "No", "LNTR0E12": "Si", "LNUT0E12": "Si", "LNUT0E16": "Si", "LNUT0E11": "Si", "LNUT0E09": "Si", "LODO0E14": "Si", "LOPP0V18": "Si", "LOPT0V18": "Si", "LPED0V16": "No", "LPED0E16": "No", "LPED0M16": "No", "LPED0E21": "No", "LPED0M21": "No", "LPED0M17": "No", "LPED0E17": "No", "LPED0M18": "No", "LPSI0V16": "Si", "LPSI0E16": "Si", "LPSI0M16": "Si", "LPSI0E17": "Si", "LPSI0M17": "Si", "LPSI0V17": "Si", "LPSI2M14": "Si", "LPSE0M14": "Si", "LPSL0M14": "Si", "MPSC0E12": "No", "EPCL0E12": "Si", "EPSC0E10": "Si", "LPSC0E09": "Si", "LPSC0E02": "Si", "LPCL0E02": "Si", "LPSI0E02": "Si", "LPSI0E10": "Si", "LPTE0E19": "No", "LREF0E19": "Si", "LTIN0E17": "No", "LTIN0M17": "No", "MTEF0E10": "No", "LTSO0M16": "No", "LTSO0E16": "No", "MVTE0M10": "No"};
 
-const CAMPUS_MAX={"Aguascalientes": 6, "Fórum Internacional": 4, "Huasteca": 4, "Industrias": 9, "Saucito": 4, "Tequis": 4, "Saltillo": 4, "Querétaro": 4, "Tlalnepantla": 4, "Coacalco": 8, "Chalco": 4, "Tlatelolco": 8, "Tulancingo": 4, "Florido": 4, "Mexicali": 3, "Chihuahua": 4, "On Aliat": 3, "Campeche": 4, "Coatzacoalcos": 4, "Comitán": 4, "Pichucalco": 4, "Tapachula": 4, "Tuxtla": 4, "Villahermosa": 4};
+const CAMPUS_MAX={"Aguascalientes": 6, "Fórum Internacional": 4, "Huasteca": 4, "Industrias": 9, "Saucito": 4, "Tequis": 4, "Saltillo": 4, "Querétaro": 4, "Tlalnepantla": 4, "Coacalco": 8, "Chalco": 4, "Tlatelolco": 8, "Tulancingo": 4, "Florido": 4, "Mexicali": 3, "Chihuahua": 4, "Campeche": 4, "Coatzacoalcos": 4, "Comitán": 4, "Pichucalco": 4, "Tapachula": 4, "Tuxtla": 4, "Villahermosa": 4, "ON Aliat": 9};
 
-const CAMPUS_ZONA={"Aguascalientes": "Bajío", "Campeche": "Sur", "Chalco": "Centro", "Chihuahua": "Norte", "Coacalco": "Centro", "Coatzacoalcos": "Sur", "Comitán": "Sur", "Florido": "Norte", "Fórum Internacional": "Bajío", "Huasteca": "Bajío", "Industrias": "Bajío", "Mexicali": "Norte", "On Aliat": "ON Aliat", "Pichucalco": "Sur", "Querétaro": "Bajío", "Saltillo": "Norte", "Saucito": "Bajío", "Tapachula": "Sur", "Tequis": "Bajío", "Tlalnepantla": "Centro", "Tlatelolco": "Centro", "Tulancingo": "Centro", "Tuxtla": "Sur", "Villahermosa": "Sur"};
+const CAMPUS_ZONA={"Aguascalientes": "Bajío", "Campeche": "Sur", "Chalco": "Centro", "Chihuahua": "Norte", "Coacalco": "Centro", "Coatzacoalcos": "Sur", "Comitán": "Sur", "Florido": "Norte", "Fórum Internacional": "Bajío", "Huasteca": "Bajío", "Industrias": "Bajío", "Mexicali": "Norte", "Pichucalco": "Sur", "Querétaro": "Bajío", "Saltillo": "Bajío", "Saucito": "Bajío", "Tapachula": "Sur", "Tequis": "Bajío", "Tlalnepantla": "Centro", "Tlatelolco": "Centro", "Tulancingo": "Centro", "Tuxtla": "Sur", "Villahermosa": "Sur", "ON Aliat": "ON Aliat"};
 
 const NIVEL_NOM={"1": "INGLÉS I", "2": "INGLÉS II", "3": "INGLÉS III", "4": "INGLÉS IV", "5": "INGLÉS V", "6": "INGLÉS VI", "7": "INGLÉS VII", "8": "INGLÉS VIII", "9": "INGLÉS IX"};
 const NIVEL_ORD={"INGLÉS I": 1, "INGLÉS II": 2, "INGLÉS III": 3, "INGLÉS IV": 4, "INGLÉS V": 5, "INGLÉS VI": 6, "INGLÉS VII": 7, "INGLÉS VIII": 8, "INGLÉS IX": 9, "Certificación": 99};
@@ -376,9 +379,7 @@ var PENDPAGO=(function(){
 
 // ═══ USUARIOS DEL SISTEMA ═══
 var SYS={
-  admin:{pass:'240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9',role:'admin',name:'Administrador General',campus:[],zona:''},
-  agente1:{pass:'ddabaa1ea73966696802178a1a075effa58c73b71c1a44a5de551f90ff76b988',role:'agent',name:'Agente Querétaro',campus:['Querétaro'],zona:'Bajío'},
-  agente2:{pass:'ddabaa1ea73966696802178a1a075effa58c73b71c1a44a5de551f90ff76b988',role:'agent',name:'Agente Saucito',campus:['Saucito'],zona:'Bajío'}
+  admin:{pass:'240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9',role:'admin',name:'Administrador General',campus:[],zona:''}
 };
 
 // ═══ USUARIOS EXTRA (localStorage) ═══
@@ -488,9 +489,44 @@ const firebaseConfig = {
   messagingSenderId: "689792936884",
   appId: "1:689792936884:web:ee1fc78a5c0634a8e2a0e1"
 };
-firebase.initializeApp(firebaseConfig);
-const db   = firebase.firestore();
-const auth = firebase.auth();
+// Verificar que Firebase SDK cargó correctamente
+var _firebaseDisponible = (typeof firebase !== 'undefined');
+if(!_firebaseDisponible){
+  console.error('[CRM] Firebase SDK no disponible — modo offline activado.');
+  // Crear objetos stub para evitar errores en cascada
+  window.db = {
+    collection: function(){ return {
+      doc: function(){ return {
+        get: function(){ return Promise.resolve({exists:false,data:function(){return {};}}); },
+        set: function(){ return Promise.resolve(); },
+        delete: function(){ return Promise.resolve(); },
+        onSnapshot: function(fn){ return function(){}; }
+      };},
+      where: function(){ return {
+        where: function(){ return {
+          orderBy: function(){ return {limit: function(){ return {get: function(){return Promise.resolve({docs:[]});}};}};},
+          onSnapshot: function(fn){ return function(){}; },
+          get: function(){ return Promise.resolve({docs:[],empty:true,docChanges:function(){return [];}}); }
+        };}
+      };},
+      orderBy: function(){ return {limit: function(){ return {get: function(){return Promise.resolve({docs:[]});}};}};},
+      limit: function(n){ return {get: function(){return Promise.resolve({docs:[],empty:true,docChanges:function(){return [];}});}}; },
+      get: function(){ return Promise.resolve({docs:[],empty:true,docChanges:function(){return [];}}); },
+      onSnapshot: function(fn){ return function(){}; },
+      batch: function(){ return {set:function(){},delete:function(){},commit:function(){return Promise.resolve();}}; }
+    };},
+    batch: function(){ return {set:function(){},delete:function(){},commit:function(){return Promise.resolve();}}; },
+    enableNetwork: function(){ return Promise.resolve(); }
+  };
+  window.auth = { signInAnonymously: function(){ return Promise.resolve(); } };
+} else {
+  firebase.initializeApp(firebaseConfig);
+  window.db   = firebase.firestore();
+  window.auth = firebase.auth();
+}
+// Compatibilidad: const db/auth ya definidos como window.db/auth
+var db   = window.db;
+var auth = window.auth;
 
 // ── Detección de protocolo y conexión Firebase ──
 var FB_ONLINE = false;
@@ -712,14 +748,14 @@ var DB_UPLOAD_IN_PROGRESS = false;
 // ── Limpieza completa para inicio de operación ──
 async function limpiarParaProduccion(){
   if(CU.role!=='admin'){notif('Solo administrador','err');return;}
-  if(!confirm('⚠️ LIMPIEZA PARA PRODUCCIÓN\n\nSe eliminarán:\n• Todas las tipificaciones (gestiones)\n• Base de datos subida (db_chunks)\n• Estados de agentes\n• Mensajes de chat\n• Usuarios de prueba (se mantiene solo admin)\n• Asignaciones y grupos\n• Historial de calificaciones local\n\nNO se eliminarán catálogos ni el usuario admin.\n\n¿Confirmar limpieza?')) return;
+  if(!confirm('⚠️ LIMPIAR BASE DE PRUEBA\n\nSe eliminarán:\n• Todas las tipificaciones (gestiones)\n• Base de datos subida (db_chunks)\n• Estados de agentes\n• Mensajes de chat\n• Usuarios de prueba (se mantiene solo admin)\n• Asignaciones y grupos\n• Historial de calificaciones local\n\nNO se eliminarán catálogos ni el usuario admin.\n\n¿Confirmar limpieza?')) return;
   if(!confirm('Segunda confirmación requerida.\n\n¿Estás SEGURO de limpiar todos los datos de prueba?')) return;
 
   var btn=document.querySelector('[onclick="limpiarParaProduccion()"]');
   if(btn) btn.textContent='🧹 Limpiando...';
   notif('Iniciando limpieza...','ok');
 
-  var colecciones=['gestiones','db_chunks','agentes_estado','mensajes','asignaciones','grupos'];
+  var colecciones=['gestiones','db_chunks','agentes_estado','mensajes'];
   var totalDocs=0;
 
   try{
@@ -739,28 +775,7 @@ async function limpiarParaProduccion(){
       console.log('[CRM] Colección '+col+' limpiada');
     }
 
-    // Limpiar usuarios de Firebase (excepto admin y SYS)
-    var usersSnap=await db.collection('usuarios').get();
-    var userBatch=db.batch();
-    var userCount=0;
-    usersSnap.docs.forEach(function(doc){
-      if(!SYS[doc.id]) { // mantener solo usuarios del sistema
-        userBatch.delete(doc.ref);
-        userCount++;
-      }
-    });
-    if(userCount>0) await userBatch.commit();
-    console.log('[CRM] '+userCount+' usuarios eliminados de Firebase');
-
-    // Limpiar EXTRA local (mantener solo SYS)
-    Object.keys(EXTRA).forEach(function(k){ delete EXTRA[k]; });
-    ASGN={};
-    GRUPOS={};
-    saveEXTRA();
-    saveASGN();
-    saveGRUPOS();
-    try{localStorage.removeItem('crm_users');}catch(e){}
-
+    // NO se eliminan usuarios, grupos ni asignaciones
     // Limpiar localStorage de prueba
     ['crm_ps','crm_pendpago','crm_callbacks','crm_hist','crm_tiempos'].forEach(function(k){
       try{localStorage.removeItem(k);}catch(e){}
@@ -782,7 +797,7 @@ async function limpiarParaProduccion(){
 
   }catch(e){
     console.error('[CRM] Error en limpieza:',e);
-    if(btn) btn.textContent='🧹 Limpiar datos de prueba';
+    if(btn) btn.textContent='🧹 Limpiar base de prueba';
     notif('Error en limpieza: '+e.message,'err');
   }
 }
@@ -816,7 +831,7 @@ async function fbUploadDB(){
       (r.t||'').substring(0,12),
       (r.e||'').substring(0,30),
       (r.un||'').substring(0,12),   // nivel historial
-      (r.oi||'').substring(0,12),   // oferta idioma
+      (r.oi||''),   // oferta idioma
       (r.cur&&r.cur.length?r.cur.slice(0,2).join('|'):''),
       (r.ca||'')                    // calificación historial
     ];
@@ -995,6 +1010,26 @@ async function checkAndLoadDB(){
   }
   _checkLoadRunning = false;
 }
+
+// Mostrar banner de error si Firebase no cargó
+document.addEventListener('DOMContentLoaded', function(){
+  if(!_firebaseDisponible){
+    var el=document.getElementById('fb-status');
+    if(el){
+      el.style.display='flex';
+      el.style.background='rgba(255,51,85,.15)';
+      el.style.color='#ff3355';
+      el.style.border='1px solid rgba(255,51,85,.3)';
+      el.textContent='● Sin Firebase';
+      el.title='Firebase no cargó — verifica conexión y recarga la página';
+    }
+    // Mostrar mensaje en pantalla de login
+    setTimeout(function(){
+      var lerr=document.getElementById('lerr');
+      if(lerr) lerr.textContent='⚠ Sin conexión a Firebase — recarga la página (F5)';
+    }, 500);
+  }
+});
 
 window.addEventListener('beforeunload',function(){
   if(!CU) return;
@@ -1500,6 +1535,91 @@ function startHeartbeat(){
   }, _HB_INTERVAL);
 }
 
+// ── Sistema de inactividad ──
+var _inactTimer=null;       // timer de advertencia
+var _inactLogoutTimer=null; // timer de cierre automático
+var _INACT_WARN=30*60*1000; // 30 min sin actividad → alerta
+var _INACT_CLOSE=5*60*1000; // 5 min después de alerta → logout
+var _inactWarned=false;
+
+function _resetInactividad(){
+  // Reiniciar si había alerta activa
+  if(_inactWarned){
+    _inactWarned=false;
+    var w=document.getElementById('inact-warning');
+    if(w) w.remove();
+    if(_inactLogoutTimer){clearTimeout(_inactLogoutTimer);_inactLogoutTimer=null;}
+  }
+  // Reiniciar timer de advertencia
+  if(_inactTimer) clearTimeout(_inactTimer);
+  if(!CU) return;
+  _inactTimer=setTimeout(function(){
+    _mostrarAlertaInactividad();
+  }, _INACT_WARN);
+}
+
+function _mostrarAlertaInactividad(){
+  if(!CU) return;
+  _inactWarned=true;
+  // Crear banner de advertencia
+  var existing=document.getElementById('inact-warning');
+  if(existing) existing.remove();
+  var div=document.createElement('div');
+  div.id='inact-warning';
+  div.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:#b45309;color:#fff;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.3)';
+  var mins=Math.ceil(_INACT_CLOSE/60000);
+  div.innerHTML='<span>⏱ Sesión inactiva — se cerrará en <span id="inact-countdown">'+mins+':00</span> minutos por seguridad</span>'
+    +'<button onclick="_resetInactividad()" style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);border-radius:6px;color:#fff;padding:4px 12px;cursor:pointer;font-size:12px">Seguir conectado</button>';
+  document.body.prepend(div);
+  // Sonido de alerta
+  try{
+    var _a=new(window.AudioContext||window.webkitAudioContext)();
+    var _o=_a.createOscillator();var _g=_a.createGain();
+    _o.connect(_g);_g.connect(_a.destination);
+    _o.frequency.value=440;_g.gain.setValueAtTime(0.15,_a.currentTime);
+    _g.gain.exponentialRampToValueAtTime(0.001,_a.currentTime+0.5);
+    _o.start();_o.stop(_a.currentTime+0.5);
+  }catch(e){}
+  // Countdown visual
+  var _secs=Math.ceil(_INACT_CLOSE/1000);
+  var _cdInterval=setInterval(function(){
+    _secs--;
+    var cdEl=document.getElementById('inact-countdown');
+    if(cdEl){
+      var m=Math.floor(_secs/60);
+      var s=_secs%60;
+      cdEl.textContent=m+':'+(s<10?'0':'')+s;
+    }
+    if(_secs<=0) clearInterval(_cdInterval);
+  },1000);
+  // Timer de cierre
+  _inactLogoutTimer=setTimeout(function(){
+    var w=document.getElementById('inact-warning');
+    if(w) w.remove();
+    notif('Sesión cerrada por inactividad','err');
+    doLogout();
+  }, _INACT_CLOSE);
+}
+
+function startInactividadTimer(){
+  // Detectar cualquier interacción del usuario
+  ['click','keydown','mousemove','touchstart','scroll'].forEach(function(ev){
+    document.addEventListener(ev, _resetInactividad, {passive:true});
+  });
+  _resetInactividad(); // iniciar
+}
+
+function stopInactividadTimer(){
+  ['click','keydown','mousemove','touchstart','scroll'].forEach(function(ev){
+    document.removeEventListener(ev, _resetInactividad);
+  });
+  if(_inactTimer){clearTimeout(_inactTimer);_inactTimer=null;}
+  if(_inactLogoutTimer){clearTimeout(_inactLogoutTimer);_inactLogoutTimer=null;}
+  var w=document.getElementById('inact-warning');
+  if(w) w.remove();
+  _inactWarned=false;
+}
+
 function startSyncPolling(){
   // Polling ligero — verificar actualizaciones en localStorage
   setInterval(function(){
@@ -1724,6 +1844,7 @@ function _continuarLogin(ud,u){
   if(ud.role==='agent') startCallbackTimer();
   startHeartbeat();
   startSyncPolling();
+  startInactividadTimer();
 }
 // ── Logout forzado centralizado ──
 function _forzarLogout(motivo){
@@ -1749,6 +1870,7 @@ function _forzarLogout(motivo){
 function doLogout(){
   // Limpiar timers activos
   if(callbackTimer){clearInterval(callbackTimer);callbackTimer=null;}
+  stopInactividadTimer();
   // Si ya no hay sesión activa, solo mostrar login
   if(!CU){
     try{
@@ -1757,7 +1879,8 @@ function doLogout(){
     }catch(e){}
     return;
   }
-  if(window._monTimer){clearInterval(window._monTimer);window._monTimer=null;}
+  if(window._monTimer){clearInterval(window._monTimer);window._monTimer=null;
+var _pgMon_pag=0;}
   if(window._heartbeatTimer){clearInterval(window._heartbeatTimer);window._heartbeatTimer=null;}
   if(window._syncTimer){clearInterval(window._syncTimer);window._syncTimer=null;}
   // Limpiar sesión y caché local
@@ -2461,6 +2584,7 @@ function openNuevoGrupo(editId){
 }
 
 function saveGrupoForm(editId){
+  if(editId==='undefined'||editId==='null') editId=null;
   var nombre=document.getElementById('ng-nombre').value.trim();
   var sup=document.getElementById('ng-sup').value;
   var agts=Array.from(document.querySelectorAll('[name=ng-agt]:checked')).map(function(el){return el.value;});
@@ -2468,9 +2592,10 @@ function saveGrupoForm(editId){
   var gid=editId||('grp_'+Date.now());
   GRUPOS[gid]={nombre:nombre,supervisor:sup,agentes:agts,campus:[]};
   saveGRUPOS();
+  if(FB_ONLINE) fbSaveGrupo(gid,GRUPOS[gid]).catch(function(e){console.error('[CRM] Error grupo Firebase:',e.message);});
   bcSend({type:'grupos_update',grupos:GRUPOS});
   closeModal();
-  notif('Grupo guardado','ok');
+  notif((editId?'Grupo actualizado':'Grupo creado')+': '+nombre,'ok');
   pgGrupos(document.getElementById('main'));
 }
 
@@ -2877,6 +3002,7 @@ function pgMonitoreo(M){
   // Filtrar agentes según rol
   var agentes=Object.entries(allU()).filter(function(e){
     if(e[1].role!=='agent') return false;
+    if(e[1]._inactivo) return false;
     if(CU.role==='supervisor'){
       var miGrupo=Object.values(GRUPOS).find(function(g){return g.supervisor===CU.username;});
       if(!miGrupo||!miGrupo.agentes||!miGrupo.agentes.length){
@@ -2908,6 +3034,7 @@ function pgMonitoreo(M){
   var hoy=_hoyFecha();
   var rows=agentes.map(function(e){
     var u=e[0],ud=e[1];
+    var _udR=allU()[u]; if(!_udR||_udR.role!=='agent') return '';
     var st=AGENTE_STATUS[u]||{estado:'desconectado'};
     var col=colEstado[st.estado]||'rgba(90,120,153,.4)';
     var ico=icoEstado[st.estado]||'⚫';
@@ -2970,52 +3097,26 @@ function pgMonitoreo(M){
       +'<div><div class="ptitle">Monitoreo en Tiempo Real</div>'
         +'<div class="psub" id="mon-ts">Actualizando cada 5s</div></div>'
       +'<button class="bout" onclick="pgMonitoreo(document.getElementById(\'main\'))">↺ Actualizar</button>'
-    +'</div>'
-    // KPIs
-    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem">'
-      +'<div style="background:rgba(13,21,32,.9);border:1px solid var(--border);border-radius:var(--r);padding:.85rem 1rem;border-left:3px solid var(--c1)">'
-        +'<div style="font-size:22px;font-weight:800;color:var(--c1)">'+agentes.length+'</div>'
-        +'<div style="font-size:11px;color:var(--tx2)">Total agentes</div>'
-      +'</div>'
-      +'<div style="background:rgba(13,21,32,.9);border:1px solid var(--border);border-radius:var(--r);padding:.85rem 1rem;border-left:3px solid var(--gn)">'
-        +'<div style="font-size:22px;font-weight:800;color:var(--gn)">'+conectados+'</div>'
-        +'<div style="font-size:11px;color:var(--tx2)">Conectados</div>'
-      +'</div>'
-      +'<div style="background:rgba(13,21,32,.9);border:1px solid var(--border);border-radius:var(--r);padding:.85rem 1rem;border-left:3px solid var(--gn)">'
-        +'<div style="font-size:22px;font-weight:800;color:var(--gn)">'+enGest+'</div>'
-        +'<div style="font-size:11px;color:var(--tx2)">En gestión</div>'
-      +'</div>'
-      +'<div style="background:rgba(13,21,32,.9);border:1px solid var(--border);border-radius:var(--r);padding:.85rem 1rem;border-left:3px solid var(--o1)">'
-        +'<div style="font-size:22px;font-weight:800;color:var(--o1)">'+sinBase+'</div>'
-        +'<div style="font-size:11px;color:var(--tx2)">Sin base seleccionada</div>'
-      +'</div>'
-    +'</div>'
-    // Tabla de agentes
-    +'<div class="twrap">'
-      +'<table style="width:100%;border-collapse:collapse">'
-        +'<thead><tr style="border-bottom:2px solid var(--border)">'
-          +'<th style="padding:.6rem 1rem;text-align:left;font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.07em">AGENTE</th>'
-          +'<th style="padding:.6rem .75rem;text-align:left;font-size:10px;font-weight:700;color:var(--tx3)">ESTADO</th>'
-          +'<th style="padding:.6rem .75rem;text-align:center;font-size:10px;font-weight:700;color:var(--tx3)">T. EN ESTADO</th>'
-          +'<th style="padding:.6rem .75rem;text-align:center;font-size:10px;font-weight:700;color:var(--gn)">VENTAS HOY</th>'
-          +'<th style="padding:.6rem .75rem;text-align:center;font-size:10px;font-weight:700;color:var(--c1)">TIP. HOY</th>'
-          +'<th style="padding:.6rem .75rem;text-align:center;font-size:10px;font-weight:700;color:var(--tx3)">TIEMPOS DEL DÍA</th>'
-          +'<th style="padding:.6rem 1rem"></th>'
-        +'</tr></thead>'
-        +'<tbody>'+(rows||'<tr><td colspan="7" class="empty" style="padding:2rem">No hay agentes asignados a tu grupo</td></tr>')+'</tbody>'
-      +'</table>'
-    +'</div>'
-    +'</div>';
+    +'</div>\''
+    +'<div id="mon-resumen" style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:.5rem">'
+    +'</div>\''
+  ;
+
+  // Resumen superior
+  var conectados=agentes.filter(function(e){return AGENTE_STATUS[e[0]]&&AGENTE_STATUS[e[0]].estado!='desconectado';}).length;
+  var enGest=agentes.filter(function(e){return AGENTE_STATUS[e[0]]&&AGENTE_STATUS[e[0]].estado==='en_gestion';}).length;
+  var sinBase=agentes.filter(function(e){return AGENTE_STATUS[e[0]]&&AGENTE_STATUS[e[0]].estado==='sin_base';}).length;
+
+  M.innerHTML=html;
 
   // Auto-refresh cada 5s
-  clearTimeout(window._monTimer);
-  window._monTimer=setTimeout(function(){
-    var ts=document.getElementById('mon-ts');
-    if(ts) ts.textContent='Última actualización: '+new Date().toLocaleTimeString('es-MX');
-    if(document.getElementById('ni-monitoreo')&&document.getElementById('ni-monitoreo').classList.contains('on')){
+  if(window._monTimer) clearInterval(window._monTimer);
+  window._monTimer = setInterval(function(){
+    if(document.getElementById('ni-monitoreo')&&
+       document.getElementById('ni-monitoreo').classList.contains('on'))
       pgMonitoreo(document.getElementById('main'));
-    }
-  },5000);
+    else clearInterval(window._monTimer);
+  }, 5000);
 }
 
 function pgDash(M){
@@ -3879,6 +3980,7 @@ function openFicha(mat,productoPresel){
     ff('Campus',r.c||'—')+ff('Zona',zonaPill(r.c))+
     ff('Programa',r.p||'—')+ff('Plan','<span class="mat" style="font-size:11px">'+(r.pl||'—')+'</span>')+
     ff('Modalidad',r.mod||'—')+ff('Tipo',tipBadge(r.tp))+
+    (r.gr?ff('Grado',r.gr):'')+(r.ti?ff('Tipo Inscripción',r.ti):'')+
     '</div>'+
     '<div class="ficha-section">CONTACTO</div>'+
     '<div class="ficha-grid">'+
@@ -3901,6 +4003,7 @@ function openFicha(mat,productoPresel){
         ff('Último nivel',_nivel)+
         ff('Calificación',_calif)+
         ff('Estado',_h.est||'—')+
+        (r.oi?ff('Oferta calculada','<span style="font-weight:700;color:var(--c1)">'+r.oi+'</span>'):'')+ 
         '</div>';
     })():'')
     +'</div>';
@@ -4569,7 +4672,7 @@ function filtrarAgentes(q){
   clearTimeout(_pgA_debounce);
   _pgA_debounce=setTimeout(function(){
     var _q=(q||'').toLowerCase().trim();
-    var tbody=document.getElementById('asgn-tbody');
+    var tbody=document.getElementById('usr-tbody');
     if(!tbody) return;
     var filas=Array.from(tbody.querySelectorAll('tr[data-search]'));
     var visibles=[];
@@ -4709,7 +4812,7 @@ function pgAsignar(M,pag){
             +'<th style="padding:.6rem .75rem;text-align:left;font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--tx3)">ESTADO</th>'
             +'<th style="padding:.6rem 1rem"></th>'
           +'</tr></thead>'
-          +'<tbody id="usr-tbody">'+filas+'</tbody>'
+          +'<tbody id="asgn-tbody">'+filas+'</tbody>'
         +'</table>'
         +paginacion
       +'</div>'
@@ -5215,7 +5318,7 @@ function pgUsuarios(M,pag){
     var u=e[0],ud=e[1],isAdmin=ud.role==='admin';
     var a=ASGN[u]||{};
     var avatarBg=isAdmin?'var(--o2)':'var(--c2)';
-    var rolLabel=isAdmin?'Administrador':'Agente';
+    var rolLabel=isAdmin?'Administrador':ud.role==='supervisor'?'Supervisor':'Agente';
     var campus=(ud.campus&&ud.campus.length)?ud.campus.join(', '):'—';
     var zona=ud.zona||CAMPUS_ZONA[ud.campus&&ud.campus[0]]||'—';
     var oferta=!isAdmin?((a.oferta&&a.oferta.length)?(a.oferta[0]==='__todos__'?'Todos los niveles':a.oferta.join(', ')):'Sin asignar'):'—';
@@ -5304,7 +5407,7 @@ function pgUsuarios(M,pag){
           +'<th style="padding:.6rem .75rem;text-align:left;font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--tx3)">CURSOS</th>'
           +'<th style="padding:.6rem 1rem"></th>'
         +'</tr></thead>'
-        +'<tbody>'+filas+'</tbody>'
+        +'<tbody id="usr-tbody">'+filas+'</tbody>'
       +'</table>'
       +paginacion
     +'</div>'
@@ -5327,7 +5430,7 @@ function pgCatalogos(M){
     +'<span style="font-size:11px;color:var(--tx3)">Requerido para que agentes y supervisores vean la base sin cargar CSV</span>'
     +'</div>'
     +'<div style="margin-top:.75rem;padding:.75rem 1rem;background:rgba(255,51,85,.06);border:1px solid rgba(255,51,85,.2);border-radius:8px;display:flex;align-items:center;gap:.75rem;flex-wrap:wrap">'
-    +'<button onclick="limpiarParaProduccion()" style="padding:8px 18px;background:rgba(255,51,85,.15);border:1px solid rgba(255,51,85,.3);border-radius:8px;color:#ff3355;font-size:12px;font-weight:700;cursor:pointer">🧹 Limpiar datos de prueba</button>'
+    +'<button onclick="limpiarParaProduccion()" style="padding:8px 18px;background:rgba(255,51,85,.15);border:1px solid rgba(255,51,85,.3);border-radius:8px;color:#ff3355;font-size:12px;font-weight:700;cursor:pointer">🧹 Limpiar base de prueba</button>'
     +'<span style="font-size:11px;color:var(--tx3)">Elimina tipificaciones, base subida, chats y estados. <b style="color:#ff3355">Usar solo al iniciar producción real.</b></span>'
     +'</div>';
   html+='</div></div>';
@@ -5475,6 +5578,13 @@ function safeStr(s){
 
 function aplicarMotor(rows){
   rows.forEach(function(r){
+    // ── Regla bachillerato: sin oferta de idioma, solo cursos ──
+    var _grado = (r.gr||'').toLowerCase();
+    var esBachillerato = /bachiller|preparatoria|prepa|bachillerato|bgc|bgu/.test(_grado);
+    if(esBachillerato){
+      r.oi = ''; // sin oferta de idioma
+      // Cursos aplican normalmente (se calculan abajo)
+    } else {
     // Calcular oferta de idioma
     var planConIng = PLAN_ING[r.pl]==='Si';
     if(planConIng){
@@ -5502,12 +5612,17 @@ function aplicarMotor(rows){
     } else {
       r.oi = 'INGLÉS I'; // sin historial → empezar desde I
     }
+    } // fin else bachillerato
     // Calcular cursos disponibles según la carrera del prospecto
     r.cur = [];
     if(CURSOS_CAT && CURSOS_CAT.length){
       var cn = (r.p||'').toLowerCase().trim();
       // Limpiar código de carrera: 'LAE42 Administración de Empresas C' → 'administración de empresas'
-      var cnLimpio = cn.replace(/^[a-z0-9]{3,8}\s+/,'').replace(/\s+[a-z]$/,'').trim();
+      // El código tiene 3-8 chars alfanuméricos + espacio al inicio
+      var cnLimpio = cn.replace(/^[a-z0-9]{2,8}[0-9]{2,4}\s+/,'')  // quitar código tipo 'LAE42 '
+                       .replace(/^[a-z]{2,4}[0-9]{2,4}\s+/,'')      // quitar código tipo 'IC42 '
+                       .replace(/\s+[a-z]{1}$/,'').trim();            // quitar sufijo de 1 letra
+
       CURSOS_CAT.forEach(function(cat){
         var cc = (cat.carrera||'').toLowerCase().trim();
         if(!cc) return;
@@ -5516,11 +5631,13 @@ function aplicarMotor(rows){
           if(r.cur.indexOf(cat.curso) < 0) r.cur.push(cat.curso);
           return;
         }
-        // Coincidencia por palabras clave (longitud > 4)
-        var palabras = cc.split(' ').filter(function(p){return p.length > 4;});
-        var match = palabras.some(function(p){
-          return cnLimpio.indexOf(p) >= 0 || cn.indexOf(p) >= 0;
-        }) || cc.indexOf(cnLimpio) >= 0 || cnLimpio.indexOf(cc) >= 0;
+        // Matching exacto: la carrera del catálogo debe ser igual a la del prospecto
+        // o estar contenida completamente (no solo una palabra en común)
+        var matchExacto = cc === cnLimpio || cc === cn;
+        var matchContenido = cnLimpio.indexOf(cc) >= 0 || cc.indexOf(cnLimpio) >= 0;
+        // Solo aplicar containment si la cadena más corta tiene >8 chars (evita falsos positivos)
+        var minLen = Math.min(cc.length, cnLimpio.length);
+        var match = matchExacto || (matchContenido && minLen > 8);
         if(match && r.cur.indexOf(cat.curso) < 0) r.cur.push(cat.curso);
       });
     }
@@ -5550,6 +5667,8 @@ function handleCSV(e,k){
             c:safeStr(r['Campus Real']),p:safeStr(r['Descripción Programa Académico']),
             pl:safeStr(r['Plan']),t:safeStr(r['Celular']||r['Phone']),
             e:safeStr(r['Correo Electrónico']),mod:safeStr(r['Modalidad']),
+            gr:safeStr(r['Grado Académico']||r['Grado']||''),
+            ti:safeStr(r['Tipo Inscripción']||r['Tipo de inscripción']||''),
             oi:'',un:'',ca:'',cur:[],z:'',tp:'I'};
         });
         if(!nr.length){setSt('Sin matriculas validas',false);return;}
@@ -5561,6 +5680,8 @@ function handleCSV(e,k){
           return{m:parseInt(r['Matrícula'])||0,n:cleanName(r['Nombre del Alumno']||''),
             c:safeStr(r['Campus Real']),p:safeStr(r['Programa']),pl:safeStr(r['Plan']),
             t:safeStr(r['Telefono']),e:safeStr(r['Mail']),mod:safeStr(r['Modalidad']),
+            gr:safeStr(r['Grado']||r['Grado Académico']||''),
+            ti:safeStr(r['Tipo de inscripción']||r['Tipo Inscripción']||''),
             oi:'',un:'',ca:'',cur:[],z:'',tp:'E'};
         });
         if(!nr.length){setSt('Sin campus validos',false);return;}
