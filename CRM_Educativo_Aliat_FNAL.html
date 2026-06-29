@@ -2134,13 +2134,29 @@ function pgDashOp(M){
   });
 
   d.forEach(function(r){
-    var _op=estadoOp(r.m);
-    if(_op==='ganado')      ganados++;
-    else if(_op==='cancelado') cancelados++;
-    else if(_op==='pendpago')  pendPago++;
-    else if(_op==='callback')  callbacks++;
-    else if(_op==='gestionado')enSeguim++;
-    else                       libres++;
+    // Buscar estado real en PS — evaluar solo productos de idioma/certif (no cursos)
+    var psM2=PS[r.m]||{};
+    var _hayGanado=false,_hayCanc=false,_hayPend=false,_hayCb=false,_hayGest=false;
+    Object.entries(psM2).forEach(function(kv){
+      var prod=kv[0],est2=kv[1];
+      // Si hay filtro de nivel, solo contar el producto filtrado
+      if(_fNiv && prod!==_fNiv) return;
+      // Si hay filtro de oferta cursos, solo cursos
+      if(_fOf==='cursos' && (!r.cur||r.cur.indexOf(prod)<0)) return;
+      if(_fOf==='certif' && prod!=='Certificación') return;
+      if(_fOf==='idioma' && (prod==='Certificación'||(r.cur&&r.cur.indexOf(prod)>=0))) return;
+      if(est2.estado==='cerrado_ganado') _hayGanado=true;
+      else if(est2.estado==='descartado_todo'||est2.estado==='descartado') _hayCanc=true;
+      else if(est2.estado==='pendiente_pago') _hayPend=true;
+      else if(est2.estado==='callback') _hayCb=true;
+      else if(est2.tip||est2.estado) _hayGest=true;
+    });
+    if(_hayGanado)       ganados++;
+    else if(_hayCanc)    cancelados++;
+    else if(_hayPend)    pendPago++;
+    else if(_hayCb)      callbacks++;
+    else if(_hayGest)    enSeguim++;
+    else                 libres++;
     // Agente — iterar productos de este prospecto
     Object.values(PS[r.m]||{}).forEach(function(est){
       var ag=est.agente;
@@ -2164,11 +2180,22 @@ function pgDashOp(M){
     if(!r.oi) return;
     if(!nivData[r.oi]) nivData[r.oi]={t:0,gano:0,gest:0,pend:0,canc:0};
     nivData[r.oi].t++;
-    var _opN=estadoOp(r.m, r.oi); // solo el nivel asignado
-    if(_opN==='ganado')          nivData[r.oi].gano++;
-    else if(_opN==='pendpago')   nivData[r.oi].pend++;
-    else if(_opN==='cancelado')  nivData[r.oi].canc++;
-    else if(_opN==='gestionado'||_opN==='callback') nivData[r.oi].gest++;
+    // Buscar el estado real en PS — el producto gestionado puede diferir de r.oi actual
+    var psM=PS[r.m]||{};
+    var _ganado=false,_pend=false,_gest=false,_canc=false;
+    Object.entries(psM).forEach(function(kv){
+      var prod=kv[0],est=kv[1];
+      // Solo productos de idioma (no cursos)
+      if(r.cur&&r.cur.indexOf(prod)>=0) return;
+      if(est.estado==='cerrado_ganado')  _ganado=true;
+      else if(est.estado==='pendiente_pago') _pend=true;
+      else if(est.estado==='descartado_todo'||est.estado==='descartado') _canc=true;
+      else if(est.tip||est.estado) _gest=true;
+    });
+    if(_ganado)       nivData[r.oi].gano++;
+    else if(_canc)    nivData[r.oi].canc++;
+    else if(_pend)    nivData[r.oi].pend++;
+    else if(_gest)    nivData[r.oi].gest++;
   });
   var nivList=NORDEN.filter(function(n){return nivData[n]&&nivData[n].t>0;});
 
@@ -2263,7 +2290,8 @@ function pgDashOp(M){
   var topHTML=topAgentes.length
     ?topAgentes.map(function(e,i){
       var st=e[1];
-      var eff=st.total>0?((st.gano/st.total)*100).toFixed(0):0;
+      var _base=st.gano+st.pend+st.gest+st.canc+st.cb;
+      var eff=_base>0?((st.gano/_base)*100).toFixed(0):0;
       var col=eff>=20?'var(--gn)':eff>=10?'var(--o1)':'var(--rd)';
       return '<tr onmouseover="this.style.background=\'rgba(78,173,243,.05)\'" onmouseout="this.style.background=\'transparent\'">'
         +'<td style="padding:.5rem .75rem;font-size:12px">'+(medals[i]||'<span style="color:var(--tx3)">#'+(i+1)+'</span>')+'</td>'
@@ -3255,13 +3283,25 @@ function pgDash(M){
     if(r.oi==='Certificación') bcF[r.c].cert++;
     if(r.cur&&r.cur.length) bcF[r.c].cur++;
     // Si hay filtro de nivel/oferta, evaluar solo ese producto
-    var _prodFilt=_fNiv||null;
-    var _opF=estadoOp(r.m, _prodFilt);
-    if(_opF==='ganado')         bcF[r.c].vend++;
-    else if(_opF==='cancelado') bcF[r.c].canc++;
-    else if(_opF==='pendpago')  bcF[r.c].pago++;
-    else if(_opF==='callback'||_opF==='gestionado') bcF[r.c].gest++;
-    else                        bcF[r.c].pgest++;
+    // Buscar estado en PS real — mismo criterio que totF
+    var psB=PS[r.m]||{};
+    var _bGano=false,_bCanc=false,_bPend=false,_bGest=false;
+    Object.entries(psB).forEach(function(kv){
+      var prod=kv[0],est=kv[1];
+      if(_fNiv && prod!==_fNiv) return;
+      if(_fOf==='cursos' && (!r.cur||r.cur.indexOf(prod)<0)) return;
+      if(_fOf==='certif' && prod!=='Certificación') return;
+      if(_fOf==='idioma' && (prod==='Certificación'||(r.cur&&r.cur.indexOf(prod)>=0))) return;
+      if(est.estado==='cerrado_ganado') _bGano=true;
+      else if(est.estado==='descartado_todo'||est.estado==='descartado') _bCanc=true;
+      else if(est.estado==='pendiente_pago') _bPend=true;
+      else if(est.tip||est.estado) _bGest=true;
+    });
+    if(_bGano)      bcF[r.c].vend++;
+    else if(_bCanc) bcF[r.c].canc++;
+    else if(_bPend) bcF[r.c].pago++;
+    else if(_bGest) bcF[r.c].gest++;
+    else            bcF[r.c].pgest++;
   });
 
   // ── Totales operativos filtrados ──
@@ -3272,12 +3312,24 @@ function pgDash(M){
     if(r.oi==='Certificación') totF.cert++;
     if(r.cur&&r.cur.length) totF.cur++;
     // Usar estadoOp filtrado por producto (igual que bcF) para consistencia
-    var _prodFiltT=_fNiv||null;
-    var _opT=estadoOp(r.m, _prodFiltT);
-    if(_opT==='ganado')                                          totF.vendidos++;
-    else if(_opT==='cancelado')                                  totF.cancelados++;
-    else if(_opT==='pendpago')                                   totF.pendPago++;
-    else if(_opT==='callback'||_opT==='gestionado')             totF.gestionados++;
+    // Buscar estado en PS real — consistente con pgDashOp
+    var psT=PS[r.m]||{};
+    var _tGano=false,_tCanc=false,_tPend=false,_tGest=false;
+    Object.entries(psT).forEach(function(kv){
+      var prod=kv[0],est=kv[1];
+      if(_fNiv && prod!==_fNiv) return;
+      if(_fOf==='cursos' && (!r.cur||r.cur.indexOf(prod)<0)) return;
+      if(_fOf==='certif' && prod!=='Certificación') return;
+      if(_fOf==='idioma' && (prod==='Certificación'||(r.cur&&r.cur.indexOf(prod)>=0))) return;
+      if(est.estado==='cerrado_ganado') _tGano=true;
+      else if(est.estado==='descartado_todo'||est.estado==='descartado') _tCanc=true;
+      else if(est.estado==='pendiente_pago') _tPend=true;
+      else if(est.tip||est.estado) _tGest=true;
+    });
+    if(_tGano)       totF.vendidos++;
+    else if(_tCanc)  totF.cancelados++;
+    else if(_tPend)  totF.pendPago++;
+    else if(_tGest)  totF.gestionados++;
     // libre → no suma en ningún contador de gestión
   });
   var porGestionar = totF.t - totF.vendidos - totF.cancelados - totF.pendPago - totF.gestionados;
