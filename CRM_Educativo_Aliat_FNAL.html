@@ -51,7 +51,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .main{flex:1;overflow-y:auto;background:var(--bg);min-width:0}
 .page{padding:1.5rem}
 .phdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem;flex-wrap:wrap;gap:.5rem}
-.ptitle{font-size:20px;font-weight:700;color:var(--c3)}
+.ptitle{font-size:20px;font-weight:700;color:var(--tx)}
 .psub{font-size:12px;color:var(--tx2);margin-top:.2rem}
 .phdr-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .sgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1rem}
@@ -86,7 +86,7 @@ tbody td{padding:9px 12px;color:var(--tx);vertical-align:middle;max-width:200px;
 .btip-win{background:var(--gnl);color:var(--gn)}.btip-pend{background:var(--aml);color:var(--am)}.btip-call{background:#E3F2FF;color:var(--c2)}.btip-no{background:var(--rdl);color:var(--rd)}.btip-na{background:var(--bg2);color:var(--tx2)}
 .cok{color:var(--gn);font-weight:700}.cbad{color:var(--rd);font-weight:700}
 .pill-zona{display:inline-block;font-size:10px;padding:2px 9px;border-radius:20px;font-weight:700}
-.stitle{font-size:13px;font-weight:700;color:var(--c3);padding:10px 1rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--bg2)}
+.stitle{font-size:13px;font-weight:700;color:var(--c1);padding:10px 1rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--bg2)}
 .stitle span{font-size:11px;color:var(--tx2);font-weight:500}
 .ugrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;max-width:960px}
 .ucard{background:rgba(78,173,243,.06);border:1px solid rgba(78,173,243,.15);border-radius:12px;padding:1.1rem 1.25rem;display:flex;flex-direction:column;gap:.25rem;min-height:160px}.ucard:hover{border-color:rgba(78,173,243,.3)}
@@ -391,10 +391,7 @@ var EXTRA=(function(){
 // ═══ ASIGNACIONES ═══
 var ASGN=(function(){
   try{var s=localStorage.getItem('crm_asgn');if(s)return JSON.parse(s);}catch(e){}
-  return {
-    agente1:{campus:['Querétaro'],tipos:['I','E'],oferta:[],cursos:[]},
-    agente2:{campus:['Saucito'],tipos:['I','E'],oferta:[],cursos:[]}
-  };
+  return {};
 })();
 
 // ═══ SESIÓN ACTIVA ═══
@@ -737,6 +734,25 @@ async function fbSaveTiempos(uid, fecha, data){
   }catch(e){ console.error('[FB] saveTiempos:', e); }
 }
 
+async function fbLoadTiempos(){
+  if(!FB_ONLINE) return;
+  try{
+    var snap = await db.collection('tiempos').get();
+    snap.forEach(function(doc){
+      var d = doc.data();
+      var uid = d.uid; var fecha = d.fecha;
+      if(!uid||!fecha) return;
+      if(!TIEMPOS[uid]) TIEMPOS[uid]={};
+      // Reconstruir estructura total + franjas
+      var entry = Object.assign({},d);
+      delete entry.uid; delete entry.fecha;
+      TIEMPOS[uid][fecha] = entry;
+    });
+    console.log('[FB] Tiempos cargados: '+snap.size+' registros');
+    try{localStorage.setItem('crm_tiempos',JSON.stringify(TIEMPOS));}catch(e){}
+  }catch(e){ console.error('[FB] loadTiempos:', e); }
+}
+
 // ── Sincronización inicial al cargar ──
 // ════════════════════════════════════════════════════════
 // DB CHUNKS — Subir y descargar base via Firestore
@@ -1003,10 +1019,10 @@ async function checkAndLoadDB(){
   if(ok){
     if(fbEl){fbEl.textContent='● Firebase';fbEl.style.color='#00cc66';}
     notif('✓ Base cargada: '+fmt(all().length)+' prospectos','ok');
-    // Actualizar estado del agente de 'sin_base' a 'libre'
+    // Base cargada — el agente sigue en sin_base (navegando)
     if(CU&&CU.role==='agent'&&AGENTE_STATUS[CU.username]&&
        AGENTE_STATUS[CU.username].estado==='sin_base'){
-      AGENTE_STATUS[CU.username].estado='libre';
+      // Mantener sin_base — el agente está navegando su base disponible
       fbUpdateAgenteEstado(CU.username,AGENTE_STATUS[CU.username]).catch(function(){});
     }
     var M=document.getElementById('main');
@@ -1124,6 +1140,8 @@ async function fbInitSync(){
     }
     // 4. PS — SIEMPRE desde Firebase cuando está disponible
     // Firebase es la fuente de verdad para gestiones
+    // Cargar tiempos de agentes desde Firebase
+    await fbLoadTiempos();
     var fbPS = await fbLoadPS();
     if(fbPS && Object.keys(fbPS).length){
       // Reemplazar PS completo con datos de Firebase
@@ -1316,9 +1334,12 @@ function all(){
 
 function getPS(mat,prod){return (PS[mat]&&PS[mat][prod])||{};}
 
-function estadoOp(mat){
+function estadoOp(mat, producto){
   var ps=PS[mat]||{};
-  var vals=Object.values(ps);
+  // Si se especifica un producto, evaluar solo ese producto
+  var vals=producto
+    ? (ps[producto] ? [ps[producto]] : [])
+    : Object.values(ps);
   if(!vals.length) return 'libre';
   if(vals.some(function(s){return s.estado==='cerrado_ganado';}))          return 'ganado';
   if(vals.some(function(s){return s.estado==='descartado_todo'||s.estado==='descartado'||s.estado==='cerrado_producto';})) return 'cancelado';
@@ -1844,7 +1865,7 @@ function _continuarLogin(ud,u){
     }
     // Estado inicial agente en Firebase
     if(CU.role==='agent'){
-      var estadoInicial = all().length > 0 ? 'libre' : 'sin_base';
+      var estadoInicial = 'sin_base'; // conectado = disponible
       AGENTE_STATUS[CU.username]={estado:estadoInicial,desde:Date.now(),
         ficha:null,tipHoy:0,ventasHoy:0,name:CU.name,campus:CU.campus,zona:CU.zona};
       iniciarTimer('noProductivo');
@@ -2143,7 +2164,7 @@ function pgDashOp(M){
     if(!r.oi) return;
     if(!nivData[r.oi]) nivData[r.oi]={t:0,gano:0,gest:0,pend:0,canc:0};
     nivData[r.oi].t++;
-    var _opN=estadoOp(r.m);
+    var _opN=estadoOp(r.m, r.oi); // solo el nivel asignado
     if(_opN==='ganado')          nivData[r.oi].gano++;
     else if(_opN==='pendpago')   nivData[r.oi].pend++;
     else if(_opN==='cancelado')  nivData[r.oi].canc++;
@@ -2157,7 +2178,7 @@ function pgDashOp(M){
     (r.cur||[]).forEach(function(cu){
       if(!curData[cu]) curData[cu]={t:0,gano:0,gest:0,pend:0};
       curData[cu].t++;
-      var _opC=estadoOp(r.m);
+      var _opC=estadoOp(r.m, cu); // evaluar solo este curso
       if(_opC==='ganado')        curData[cu].gano++;
       else if(_opC==='pendpago') curData[cu].pend++;
       else if(_opC==='gestionado'||_opC==='callback') curData[cu].gest++;
@@ -2680,7 +2701,7 @@ function rptGestionBase(){
     'Matrícula','Nombre','Tipo','Campus','Zona','Programa','Plan','Modalidad',
     'Teléfono','Tel. Adicional','Correo','Correo Adicional',
     'Último Nivel Idioma','Calificación','Oferta Calculada',
-    'Producto Gestionado','Estado','Tipificación','Comentarios',
+    'Producto Gestionado','Tipo Producto','Estado','Tipificación','Comentarios',
     'Tel. Adicional (Tip)','Correo Adicional (Tip)','Costo',
     'Intentos No Contesta','Fecha Callback','Hora Callback',
     'Último Agente','Fecha Última Gestión','Fecha Próx. Callback'
@@ -2693,7 +2714,7 @@ function rptGestionBase(){
 
     // Determinar qué productos incluir según el filtro de oferta
     var productosFiltrados=todosProductos.filter(function(prod){
-      if(_fOf==='idioma')  return prod!=='Certificación'&&!r.cur||r.cur.indexOf(prod)<0; // es idioma
+      if(_fOf==='idioma')  return (prod!=='Certificación')&&(r.cur?r.cur.indexOf(prod)<0:true); // es idioma (no certif ni curso)
       if(_fOf==='certif')  return prod==='Certificación';
       if(_fOf==='cursos')  return r.cur&&r.cur.indexOf(prod)>=0;
       return true; // sin filtro → todos
@@ -2731,14 +2752,20 @@ function rptGestionBase(){
       var cb=CALLBACKS.find(function(x){
         return x.mat===r.m&&x.producto===prod&&!x.done;
       });
-      var estProd=(ps2.estado||'libre').replace(/_/g,' ');
+      var _eLabels={'cerrado_ganado':'Cerrado Ganado','pendiente_pago':'Pendiente de Pago',
+        'callback':'Callback','no_contesta':'No Contesta','descartado_todo':'Descartado Total',
+        'descartado':'Descartado','cerrado_producto':'Cerrado Producto','libre':'Sin tipificación',
+        'gestionado':'Gestionado','volver_cola':'Volver a Cola'};
+      var estProd=_eLabels[ps2.estado]||(ps2.estado||'Sin tipificación').replace(/_/g,' ');
 
       rows.push([
         r.m, r.n, r.tp==='I'?'Inscrito':'Egresado',
         r.c, CAMPUS_ZONA[r.c]||'', r.p, r.pl||'', r.mod||'',
         r.t||'', r.t2||'', r.e||'', r.e2||'',
         r.un||'', r.ca||'', r.oi||'',
-        prod, estProd,
+        prod,
+        (r.cur&&r.cur.indexOf(prod)>=0?'Curso':prod==='Certificación'?'Certificación':'Idioma'),
+        estProd,
         ps2.tip||'',
         ps2.comment||'',
         ps2.tel2||r.t2||'',
@@ -2820,6 +2847,8 @@ function rptProductividad(){
   // Incluir agentes inactivos (eliminados) para reportes históricos
   var _fF2=document.getElementById('rpt3-hasta')&&document.getElementById('rpt3-hasta').value||_hoyFecha();
   var _fAgt3=document.getElementById('rpt3-agente')&&document.getElementById('rpt3-agente').value||'';
+  var _fHI3=document.getElementById('rpt3-hora-ini')&&document.getElementById('rpt3-hora-ini').value||'';
+  var _fHF3=document.getElementById('rpt3-hora-fin')&&document.getElementById('rpt3-hora-fin').value||'';
 
   var headers=[
     'Agente','Usuario','Zona','Campus',
@@ -2909,9 +2938,13 @@ function pgReportes(M){
     +Object.keys((function(){var bc={};all().forEach(function(r){if(r.c)bc[r.c]=1;});return bc;})())
     .sort().map(function(cp){return '<option value="'+cp+'">'+cp+'</option>';}).join('');
 
-  var estadoOpts='<option value="">Todos los estados</option>'
-    +['cerrado_ganado','pendiente_pago','callback','no_contesta','descartado_todo','descartado','cerrado_producto','libre']
-    .map(function(s){return '<option value="'+s+'">'+s.replace(/_/g,' ')+'</option>';}).join('');
+  var _estadoLabels={'cerrado_ganado':'Cerrado Ganado','pendiente_pago':'Pendiente de Pago',
+      'callback':'Callback','no_contesta':'No Contesta','descartado_todo':'Descartado Total',
+      'descartado':'Descartado','cerrado_producto':'Cerrado Producto','libre':'Sin tipificación'};
+    var estadoOpts='<option value="">Todos los estados</option>'
+    +Object.keys(_estadoLabels).map(function(s){
+      return '<option value="'+s+'">'+_estadoLabels[s]+'</option>';
+    }).join('');
 
   function panel(titulo,color,desc,filtros,btnId,btnFn){
     return '<div style="background:rgba(13,21,32,.9);border:1px solid var(--border);border-radius:var(--r);overflow:hidden">'
@@ -3008,11 +3041,22 @@ function pgMonitoreo(M,pag){
       return miGrupo.agentes.indexOf(e[0])>=0;
     }
     return true;
+  }).filter(function(e){
+    var u=e[0],ud=e[1];
+    var campus0=(ud.campus&&ud.campus[0])||'';
+    var zona=CAMPUS_ZONA[campus0]||'';
+    if(_monFZ&&zona!==_monFZ) return false;
+    if(_monFC&&campus0!==_monFC) return false;
+    if(_monBusqueda){
+      var str=(ud.name||'').toLowerCase()+' '+u.toLowerCase()+' '+zona.toLowerCase()+' '+campus0.toLowerCase();
+      if(str.indexOf(_monBusqueda)<0) return false;
+    }
+    return true;
   });
   var hoy=new Date().toISOString().slice(0,10);
-  var colEstado={conectado:'var(--gn)',en_gestion:'var(--c1)',sin_base:'var(--o1)',pausa:'var(--am)',desconectado:'rgba(90,120,153,.4)'};
-  var icoEstado={conectado:'🟢',en_gestion:'🔵',sin_base:'🟡',pausa:'🟠',desconectado:'⚫'};
-  var lblEstado={conectado:'Conectado',en_gestion:'En gestión',sin_base:'Sin base',pausa:'En pausa',desconectado:'Desconectado'};
+  var colEstado={conectado:'var(--gn)',en_gestion:'var(--c1)',sin_base:'var(--gn)',pausa:'var(--am)',desconectado:'rgba(90,120,153,.4)'};
+  var icoEstado={conectado:'🟢',en_gestion:'🔵',sin_base:'🟢',pausa:'🟠',desconectado:'⚫'};
+  var lblEstado={conectado:'Conectado',en_gestion:'En gestión',sin_base:'Disponible',pausa:'En pausa',desconectado:'Desconectado'};
   var _MON_PER=15;
   var _monTotal=agentes.length;
   _monTotalPag=Math.ceil(_monTotal/_MON_PER)||1;
@@ -3063,10 +3107,22 @@ function pgMonitoreo(M,pag){
     pagHtml+='<button onclick="_pgMon_pag=Math.min(_monTotalPag-1,_pgMon_pag+1);pgMonitoreo(document.getElementById(\'main\'))" style="padding:4px 14px;border-radius:6px;border:1px solid var(--border);background:rgba(78,173,243,.1);color:var(--c1);cursor:pointer"'+(_pgMon_pag>=_monTotalPag-1?' disabled':'')+'>Siguiente →</button>';
     pagHtml+='</div>';
   }
+  var _zonaOptsM='<option value="">Todas las zonas</option>'+ZONA_ORDER.map(function(z){return '<option value="'+z+'"'+(z===_monFZ?' selected':'')+'>'+z+'</option>';}).join('');
+  var _campusOptsM='<option value="">Todos los campus</option>'+Object.keys(CAMPUS_ZONA).sort().map(function(cp){return '<option value="'+cp+'"'+(cp===_monFC?' selected':'')+'>'+cp+'</option>';}).join('');
   var html='<div class="page" style="display:flex;flex-direction:column;gap:.85rem">';
-  html+='<div style="display:flex;justify-content:space-between;align-items:center">';
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem">';
   html+='<div><div class="ptitle">Monitoreo en Tiempo Real</div><div class="psub">Actualizando cada 5s</div></div>';
   html+='<button class="bout" onclick="pgMonitoreo(document.getElementById(\'main\'))">↺ Actualizar</button></div>';
+  html+='<div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">';
+  html+='<div style="position:relative;flex:1;min-width:160px">';
+  html+='<span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--tx3);font-size:13px;pointer-events:none">&#x1F50D;</span>';
+  html+='<input id="mon-q" type="text" placeholder="Buscar agente, campus..." value="'+(_monBusqueda||'')+'" oninput="filtrarMonitoreo(this.value)" autocomplete="off" style="width:100%;padding:7px 12px 7px 30px;border-radius:20px;border:1px solid var(--border);background:rgba(78,173,243,.06);color:var(--tx);font-size:12px;outline:none">';
+  html+=(_monBusqueda?'<button onclick="limpiarMonBusqueda()" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--tx3);cursor:pointer;font-size:14px;padding:2px 5px">&#x2715;</button>':'');
+  html+='</div>';
+  html+='<select onchange="cambiarFiltroMon(this.value,\'\')" style="padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:rgba(78,173,243,.06);color:var(--tx);font-size:11px;cursor:pointer">'+_zonaOptsM+'</select>';
+  html+='<select onchange="cambiarFiltroMon(_monFZ,this.value)" style="padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:rgba(78,173,243,.06);color:var(--tx);font-size:11px;cursor:pointer">'+_campusOptsM+'</select>';
+  if(_monFZ||_monFC||_monBusqueda) html+='<button onclick="_monFZ=\'\';_monFC=\'\';_monBusqueda=\'\';_pgMon_pag=0;pgMonitoreo(document.getElementById(\'main\'))" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:rgba(255,51,85,.1);color:var(--rd);font-size:11px;cursor:pointer">&#x2715; Limpiar</button>';
+  html+='</div>';
   html+='<div style="display:flex;gap:.75rem;flex-wrap:wrap">';
   html+='<div class="scard"><div class="sn">'+agentes.length+'</div><div class="sl">Agentes</div></div>';
   html+='<div class="scard"><div class="sn" style="color:var(--gn)">'+conectados+'</div><div class="sl">Conectados</div></div>';
@@ -3140,16 +3196,17 @@ function pgDash(M){
   var bc = {};
   d.forEach(function(r){
     if(!r.c) return;
-    if(!bc[r.c]) bc[r.c]={t:0,id:0,cert:0,cur:0,gest:0,vend:0,canc:0,pgest:0};
+    if(!bc[r.c]) bc[r.c]={t:0,id:0,cert:0,cur:0,gest:0,pago:0,vend:0,canc:0,pgest:0};
     bc[r.c].t++;
     if(r.oi) bc[r.c].id++;
     if(r.oi==='Certificación') bc[r.c].cert++;
     if(r.cur&&r.cur.length) bc[r.c].cur++;
     var _op=estadoOp(r.m);
-    if(_op==='ganado')      bc[r.c].vend++;
-    else if(_op==='cancelado') bc[r.c].canc++;
-    else if(_op==='pendpago'||_op==='callback'||_op==='gestionado') bc[r.c].gest++;
-    else                    bc[r.c].pgest++;
+    if(_op==='ganado')          bc[r.c].vend++;
+    else if(_op==='cancelado')  bc[r.c].canc++;
+    else if(_op==='pendpago')   bc[r.c].pago++;
+    else if(_op==='callback'||_op==='gestionado') bc[r.c].gest++;
+    else                        bc[r.c].pgest++;
   });
 
   // ── Stats por zona ──
@@ -3192,15 +3249,18 @@ function pgDash(M){
   var bcF={};
   dFilt.forEach(function(r){
     if(!r.c) return;
-    if(!bcF[r.c]) bcF[r.c]={t:0,id:0,cert:0,cur:0,gest:0,vend:0,canc:0,pgest:0};
+    if(!bcF[r.c]) bcF[r.c]={t:0,id:0,cert:0,cur:0,gest:0,pago:0,vend:0,canc:0,pgest:0};
     bcF[r.c].t++;
     if(r.oi) bcF[r.c].id++;
     if(r.oi==='Certificación') bcF[r.c].cert++;
     if(r.cur&&r.cur.length) bcF[r.c].cur++;
-    var _opF=estadoOp(r.m);
+    // Si hay filtro de nivel/oferta, evaluar solo ese producto
+    var _prodFilt=_fNiv||null;
+    var _opF=estadoOp(r.m, _prodFilt);
     if(_opF==='ganado')         bcF[r.c].vend++;
     else if(_opF==='cancelado') bcF[r.c].canc++;
-    else if(_opF==='pendpago'||_opF==='callback'||_opF==='gestionado') bcF[r.c].gest++;
+    else if(_opF==='pendpago')  bcF[r.c].pago++;
+    else if(_opF==='callback'||_opF==='gestionado') bcF[r.c].gest++;
     else                        bcF[r.c].pgest++;
   });
 
@@ -3211,17 +3271,14 @@ function pgDash(M){
     if(r.oi) totF.id++;
     if(r.oi==='Certificación') totF.cert++;
     if(r.cur&&r.cur.length) totF.cur++;
-    // Estados operativos: cruzar con PS
-    var ps=PS[r.m]||{};
-    var vals=Object.values(ps);
-    var tieneGanado   = vals.some(function(s){return s.estado==='cerrado_ganado';});
-    var tieneCancel   = vals.some(function(s){return s.estado==='descartado_todo'||s.estado==='descartado'||s.estado==='cerrado_producto';});
-    var tienePendPago = vals.some(function(s){return s.estado==='pendiente_pago';});
-    var tieneGest     = vals.some(function(s){return s.tip||s.estado;});
-    if(tieneGanado)        totF.vendidos++;
-    else if(tieneCancel)   totF.cancelados++;
-    else if(tienePendPago) totF.pendPago++;
-    else if(tieneGest)     totF.gestionados++;
+    // Usar estadoOp filtrado por producto (igual que bcF) para consistencia
+    var _prodFiltT=_fNiv||null;
+    var _opT=estadoOp(r.m, _prodFiltT);
+    if(_opT==='ganado')                                          totF.vendidos++;
+    else if(_opT==='cancelado')                                  totF.cancelados++;
+    else if(_opT==='pendpago')                                   totF.pendPago++;
+    else if(_opT==='callback'||_opT==='gestionado')             totF.gestionados++;
+    // libre → no suma en ningún contador de gestión
   });
   var porGestionar = totF.t - totF.vendidos - totF.cancelados - totF.pendPago - totF.gestionados;
 
@@ -3248,11 +3305,12 @@ function pgDash(M){
       }).sort(function(a,b){return bcF[b].t-bcF[a].t;});
     if(!cpList.length) return '';
 
-    var zt={t:0,id:0,cert:0,cur:0,gest:0,vend:0,canc:0,pgest:0};
+    var zt={t:0,id:0,cert:0,cur:0,gest:0,pago:0,vend:0,canc:0,pgest:0};
     cpList.forEach(function(cp){
       zt.t+=bcF[cp].t; zt.id+=bcF[cp].id;
       zt.cert+=bcF[cp].cert; zt.cur+=bcF[cp].cur;
-      zt.gest+=bcF[cp].gest; zt.vend+=bcF[cp].vend;
+      zt.gest+=bcF[cp].gest; zt.pago+=bcF[cp].pago;
+      zt.vend+=bcF[cp].vend;
       zt.canc+=bcF[cp].canc; zt.pgest+=bcF[cp].pgest;
     });
 
@@ -3263,13 +3321,14 @@ function pgDash(M){
       +'<td style="padding:.65rem .5rem;text-align:right;font-size:13px;font-weight:700;color:var(--c1)">'+fmt(zt.t)+'</td>'
       +'<td style="padding:.65rem .5rem"></td>'
       +'<td style="padding:.65rem .5rem;text-align:right;font-size:12px;color:var(--tx2)">'+fmt(zt.gest)+'</td>'
+      +'<td style="padding:.65rem .5rem;text-align:right;font-size:12px;color:var(--am)">'+fmt(zt.pago)+'</td>'
       +'<td style="padding:.65rem .5rem;text-align:right;font-size:12px;color:var(--gn)">'+fmt(zt.vend)+'</td>'
       +'<td style="padding:.65rem .5rem;text-align:right;font-size:12px;color:var(--rd)">'+fmt(zt.canc)+'</td>'
       +'<td style="padding:.65rem .5rem;text-align:right;font-size:12px;color:var(--o1)">'+fmt(zt.pgest)+'</td>'
       +'</tr>';
 
     var rows = cpList.map(function(cp){
-      var v=bcF[cp], pz=zt.t>0?Math.round(v.t/zt.t*100):0;
+      var v=bcF[cp], pz=dFilt.length>0?Math.round(v.t/dFilt.length*100):0;
       var pctVend=v.t>0?Math.round((v.t?v.vend/v.t*100:0)):0;
       return '<tr onmouseover="this.style.background=\'rgba(78,173,243,.04)\'" onmouseout="this.style.background=\'transparent\'">'
         +'<td style="padding:.5rem 1rem .5rem 2rem;font-size:12px;font-weight:600;color:var(--tx)">'+cp+'</td>'
@@ -3281,6 +3340,7 @@ function pgDash(M){
         +'<td style="padding:.5rem .5rem;text-align:right;font-size:12px;font-weight:700;color:var(--tx)">'+fmt(v.t)+'</td>'
         +'<td style="padding:.5rem .5rem;text-align:right;font-size:11px;color:var(--tx3)">'+pz+'%</td>'
         +'<td style="padding:.5rem .5rem;text-align:right;font-size:12px;color:var(--tx2)">'+fmt(v.gest)+'</td>'
+        +'<td style="padding:.5rem .5rem;text-align:right;font-size:12px;color:'+(v.pago>0?'var(--am)':'var(--tx3)')+'">'+fmt(v.pago)+'</td>'
         +'<td style="padding:.5rem .5rem;text-align:right;font-size:12px;color:var(--gn);font-weight:'+(v.vend>0?'700':'400')+'">'+fmt(v.vend)+'</td>'
         +'<td style="padding:.5rem .5rem;text-align:right;font-size:12px;color:'+(v.canc>0?'var(--rd)':'var(--tx3)')+'">'+fmt(v.canc)+'</td>'
         +'<td style="padding:.5rem .5rem;text-align:right;font-size:12px;color:'+(v.pgest>0?'var(--o1)':'var(--tx3)')+'">'+fmt(v.pgest)+'</td>'
@@ -3351,11 +3411,13 @@ function pgDash(M){
         +'</div></div>'
     +'</div>'
     // Contadores operativos
-    +'<div class="sgrid" style="grid-template-columns:repeat(5,1fr);margin-bottom:1.5rem">'
+    +'<div class="sgrid" style="grid-template-columns:repeat(6,1fr);margin-bottom:1.5rem">'
       +'<div class="sc sc-blue"><div class="sn">'+fmt(totF.t)+'</div>'
         +'<div class="sl">'+(hayFiltro?'Total (filtrado)':'Total base')+'</div></div>'
       +'<div class="sc sc-teal"><div class="sn" style="color:var(--c1)">'+fmt(totF.gestionados)+'</div>'
-        +'<div class="sl">Gestionados</div></div>'
+        +'<div class="sl">En gestión</div></div>'
+      +'<div class="sc" style="border-top:3px solid var(--am)"><div class="sn" style="color:var(--am)">'+fmt(totF.pendPago)+'</div>'
+        +'<div class="sl">Pend. Pago</div></div>'
       +'<div class="sc sc-green"><div class="sn" style="color:var(--gn)">'+fmt(totF.vendidos)+'</div>'
         +'<div class="sl">Vendidos</div></div>'
       +'<div class="sc" style="border-top:3px solid var(--rd)"><div class="sn" style="color:var(--rd)">'+fmt(totF.cancelados)+'</div>'
@@ -3403,8 +3465,9 @@ function pgDash(M){
             +'<th style="padding:.6rem 1rem;text-align:left;font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--tx3)">CAMPUS</th>'
             +'<th style="padding:.6rem .75rem;font-size:10px;color:var(--tx3)"></th>'
             +'<th style="padding:.6rem .75rem;text-align:right;font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--tx3)">TOTAL</th>'
-            +'<th style="padding:.6rem .75rem;text-align:right;font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--tx3)">% ZONA</th>'
+            +'<th style="padding:.6rem .75rem;text-align:right;font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--tx3)">% BASE</th>'
             +'<th style="padding:.6rem .75rem;text-align:right;font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--c1)">GESTIONADOS</th>'
+            +'<th style="padding:.6rem .75rem;text-align:right;font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--am)">PEND.PAGO</th>'
             +'<th style="padding:.6rem .75rem;text-align:right;font-size:10px;font-weight:700;letter-spacing:.08em;color:rgba(160,100,255,.9)">VENDIDOS</th>'
             +'<th style="padding:.6rem .75rem;text-align:right;font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--gn)">CANCELADOS</th>'
             +'<th style="padding:.6rem .75rem;text-align:right;font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--o1)">POR GESTIONAR</th>'
@@ -3677,7 +3740,14 @@ function _abrirSiguienteProspecto(idx){
       var ps=PS[mat]||{},pv=ps[oa.valor]||{};
       if(Object.values(ps).some(function(s){return s.estado==='descartado_todo';})) return false;
       if(pv.estado==='descartado') return false;
-      if(pv.estado==='cerrado_ganado'&&pv.agente&&pv.agente!==CU.username) return false;
+      if(pv.estado==='cerrado_ganado') return false;
+      // Ganado en cualquier idioma → no aparece en otros idiomas
+      if(oa.tipo==='idioma'){
+        var yaInscr=Object.entries(ps).some(function(kv){
+          return kv[1].estado==='cerrado_ganado' && kv[0]!==oa.valor && kv[0]!=='Certificación';
+        });
+        if(yaInscr) return false;
+      }
       return true;
     });
     // Usar índice O(1) en lugar de find O(n)
@@ -4370,10 +4440,22 @@ function pgMiBase(M){
 
   // Contadores solo sobre la base asignada
   var ganados=0, gestionados=0;
+  // Contar ganados y gestionados SOLO en los productos asignados al agente
   Object.keys(_mats).forEach(function(m){
-    var v=Object.values(PS[m]||{});
-    if(v.some(function(s){return s.estado==='cerrado_ganado';})) ganados++;
-    if(v.some(function(s){return s.tip;})) gestionados++;
+    // Buscar el prospecto para saber su producto asignado
+    var rr=_dbIdx?_dbIdx[parseInt(m)]:null;
+    if(!rr) return;
+    var psM=PS[m]||{};
+    // Productos relevantes: los que están en su oferta asignada
+    var prodsRel=[];
+    if(rr.oi && (todosIdioma||(oId&&oId.indexOf(rr.oi)>=0))) prodsRel.push(rr.oi);
+    if(rr.cur) rr.cur.forEach(function(cu){
+      if(todosCurso||(oCu&&oCu.indexOf(cu)>=0)) prodsRel.push(cu);
+    });
+    if(!prodsRel.length) prodsRel=Object.keys(psM); // fallback: todos
+    var vRel=prodsRel.map(function(p){return psM[p]||{};});
+    if(vRel.some(function(s){return s.estado==='cerrado_ganado';})) ganados++;
+    if(vRel.some(function(s){return s.tip;})) gestionados++;
   });
   var faltantes=totalBase-ganados;
 
@@ -4500,18 +4582,44 @@ function verOfertas(tipo,valor){
       if(Object.values(ps).some(function(s){return s.estado==='descartado_todo';})) return false;
       // Descartados para este producto: fuera
       if(pv.estado==='descartado') return false;
-      // Ganados por OTRO agente: no reasignar
-      if(pv.estado==='cerrado_ganado'&&pv.agente&&pv.agente!==CU.username) return false;
+      // Ganado en este producto: fuera de cola
+      if(pv.estado==='cerrado_ganado') return false;
+      // Ganado en cualquier otro idioma → no ofrecer otro idioma (ya inscrito)
+      if(tipo==='idioma'){
+        var yaInscrIdioma=Object.entries(ps).some(function(kv){
+          return kv[1].estado==='cerrado_ganado' && kv[0]!==valor && kv[0]!=='Certificación';
+        });
+        if(yaInscrIdioma) return false;
+      }
+      // Callback con fecha futura: no interrumpir (respetar cita)
+      if(pv.estado==='callback'&&pv.fechaCallback){
+        var _ahora=Date.now();
+        var _fcb=typeof pv.fechaCallback==='number'?pv.fechaCallback:new Date(pv.fechaCallback).getTime();
+        if(_fcb>_ahora) return false; // aún no es hora del callback
+      }
       return true;
     });
 
-    // ── 4. Ordenar: primero libres, luego por estado ──
-    var ord={libre:0,no_contesta:1,volver_cola:1,callback:2,
-             contactado:3,pendiente_pago:3,cerrado_ganado:4};
+    // ── 4. Ordenar: prioridad de gestión ──
+    // Grupo 0: sin ninguna gestión (nunca tocados) — primero
+    // Grupo 1: intentos sin calificación (no_contesta, volver_cola)
+    // Grupo 2: con calificación (callback, contactado, pendiente_pago)
+    // Grupo 3: ganados (al final, casi siempre excluidos arriba)
+    // Dentro de cada grupo: los más antiguos primero (ts menor = más tiempo sin contacto)
+    function _getGrupo(r){
+      var pv=(PS[r.m]&&PS[r.m][valor])||null;
+      if(!pv||!pv.estado||pv.estado==='libre') return 0;
+      if(pv.estado==='no_contesta'||pv.estado==='volver_cola') return 1;
+      if(pv.estado==='callback'||pv.estado==='contactado'||pv.estado==='pendiente_pago') return 2;
+      return 3; // cerrado_ganado
+    }
     lista.sort(function(x,y){
-      var sa=(PS[x.m]&&PS[x.m][valor])?PS[x.m][valor].estado:'libre';
-      var sb=(PS[y.m]&&PS[y.m][valor])?PS[y.m][valor].estado:'libre';
-      return (ord[sa]||0)-(ord[sb]||0);
+      var ga=_getGrupo(x), gb=_getGrupo(y);
+      if(ga!==gb) return ga-gb;
+      // Mismo grupo: el más antiguo primero (sin ts = 0 → va primero)
+      var ta=(PS[x.m]&&PS[x.m][valor]&&PS[x.m][valor].ts)||0;
+      var tb=(PS[y.m]&&PS[y.m][valor]&&PS[y.m][valor].ts)||0;
+      return ta-tb;
     });
 
     // ── 5. Partición de lista por agente (segmentos disjuntos) ──
@@ -4557,12 +4665,20 @@ function verOfertas(tipo,valor){
 
   var cola=window._colas[colaKey];
   // Reconstruir fData desde la DB actual (por si cambió desde que se creó la cola)
+  if(!_dbIdx) _buildDbIdx();
   fData=cola.lista.map(function(mat){
-    return all().find(function(r){return r.m===mat;});
+    return _dbIdx[mat]||null;
   }).filter(Boolean);
 
-  if(!fData.length){
-    notif('Sin prospectos disponibles para esta oferta','warn');
+  // Si la cola quedó vacía o el único elemento ya fue gestionado como ganado/descartado
+  // → limpiar caché y reconstruir desde cero para evitar "sin prospectos" falso
+  var _todosTraba=fData.length>0&&fData.every(function(r){
+    var pv=(PS[r.m]&&PS[r.m][valor])||{};
+    return pv.estado==='descartado'||pv.estado==='cerrado_ganado';
+  });
+  if(!fData.length||_todosTraba){
+    delete window._colas[colaKey];
+    verOfertas(tipo,valor);
     return;
   }
   _abrirSiguienteProspecto(cola.pos);
@@ -4652,7 +4768,21 @@ function abrirCallback(cb){
 var _pgA_pag=0;
 var _pgA_debounce=null;
 var _pgA_busqueda='';
+var _pgA_fZ='';
+var _pgA_fC='';
+var _pgA_fG='';
 
+function cambiarFiltroAsgn(fz, fc, fg){
+  _pgA_fZ=fz!==undefined?fz:_pgA_fZ;
+  _pgA_fC=fc!==undefined?fc:_pgA_fC;
+  _pgA_fG=fg!==undefined?fg:_pgA_fG;
+  _pgA_pag=0;
+  pgAsignar(document.getElementById('main'));
+}
+function limpiarFiltrosAsgn(){
+  _pgA_fZ='';_pgA_fC='';_pgA_fG='';_pgA_busqueda='';_pgA_pag=0;
+  pgAsignar(document.getElementById('main'));
+}
 function filtrarAgentes(q){
   clearTimeout(_pgA_debounce);
   _pgA_busqueda=(q||'').toLowerCase().trim();
@@ -4675,12 +4805,26 @@ function pgAsignar(M,pag){
   var totalPag=Math.max(1,Math.ceil(total/PER));
   if(_pgA_pag>=totalPag) _pgA_pag=0;
   // Filtrar por búsqueda si hay texto
-  var agents=!_pgA_busqueda ? allAgents : allAgents.filter(function(e){
+  var agents=allAgents.filter(function(e){
     var u=e[0],ud=e[1],a=ASGN[u]||{};
-    var zona=ud.zona||CAMPUS_ZONA[ud.campus&&ud.campus[0]]||'';
-    var campus=(ud.campus&&ud.campus.length)?ud.campus.join(' '):'';
-    var str=[u,ud.name||'',zona,campus].join(' ').toLowerCase();
-    return str.indexOf(_pgA_busqueda)>=0;
+    var campus0=(ud.campus&&ud.campus[0])||'';
+    var zona=ud.zona||CAMPUS_ZONA[campus0]||'';
+    // Filtro zona
+    if(_pgA_fZ && zona!==_pgA_fZ) return false;
+    // Filtro campus
+    if(_pgA_fC && campus0!==_pgA_fC) return false;
+    // Filtro grupo
+    if(_pgA_fG){
+      var grp=GRUPOS[_pgA_fG]||{};
+      if(!grp.agentes||grp.agentes.indexOf(u)<0) return false;
+    }
+    // Filtro búsqueda
+    if(_pgA_busqueda){
+      var campus=(ud.campus&&ud.campus.length)?ud.campus.join(' '):'';
+      var str=[u,ud.name||'',zona,campus].join(' ').toLowerCase();
+      if(str.indexOf(_pgA_busqueda)<0) return false;
+    }
+    return true;
   });
   // Calcular slice de la página actual
   var totalFiltradoA=agents.length;
@@ -4753,12 +4897,21 @@ function pgAsignar(M,pag){
     +'</div>';
 
   M.innerHTML='<div class="page">'
-    +'<div class="phdr" style="margin-bottom:1rem">'
+    +'<div class="phdr" style="margin-bottom:.75rem">'
       +'<div>'
         +'<div class="ptitle">Asignación de Base</div>'
-        +'<div id="asgn-resumen" class="psub">'+total+' agentes &middot; configura campus, oferta y tipo</div>'
+        +'<div id="asgn-resumen" class="psub">'+agents.length+(agents.length!==allAgents.length?' de '+allAgents.length:'')+' agentes &middot; configura campus, oferta y tipo</div>'
       +'</div>'
-      +'<div class="phdr-actions">'
+      +'<div class="phdr-actions" style="flex-wrap:wrap;gap:.5rem">'
+      +'<select onchange="cambiarFiltroAsgn(this.value,\'\',_pgA_fG)" style="padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:rgba(78,173,243,.06);color:var(--tx);font-size:11px;cursor:pointer">'
+      +('<option value="">Todas las zonas</option>'+ZONA_ORDER.map(function(z){return '<option value="'+z+'"'+(_pgA_fZ===z?' selected':'')+'>'+z+'</option>';}).join(''))
+      +'</select>'
+      +'<select onchange="cambiarFiltroAsgn(_pgA_fZ,this.value,_pgA_fG)" style="padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:rgba(78,173,243,.06);color:var(--tx);font-size:11px;cursor:pointer">'
+      +('<option value="">Todos los campus</option>'+Object.keys(CAMPUS_ZONA).sort().filter(function(cp){return !_pgA_fZ||CAMPUS_ZONA[cp]===_pgA_fZ;}).map(function(cp){return '<option value="'+cp+'"'+(_pgA_fC===cp?' selected':'')+'>'+cp+'</option>';}).join(''))
+      +'</select>'
+      +'<select onchange="cambiarFiltroAsgn(_pgA_fZ,_pgA_fC,this.value)" style="padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:rgba(78,173,243,.06);color:var(--tx);font-size:11px;cursor:pointer">'
+      +('<option value="">Todos los grupos</option>'+Object.entries(GRUPOS).map(function(e){return '<option value="'+e[0]+'"'+(_pgA_fG===e[0]?' selected':'')+'>'+e[1].nombre+'</option>';}).join(''))
+      +'</select>'
         +'<div style="position:relative">'
           +'<span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--tx3);font-size:13px;pointer-events:none">&#x1F50D;</span>'
           +'<input id="asgn-q" type="text" placeholder="Nombre, usuario, zona o campus..." '
@@ -4772,6 +4925,9 @@ function pgAsignar(M,pag){
 +'</div>'
       +'</div>'
     +'</div>'
+    +(_pgA_fZ||_pgA_fC||_pgA_fG
+      ? '<div style="margin-bottom:.5rem">'+'<button onclick="limpiarFiltrosAsgn()" style="padding:5px 14px;border-radius:8px;border:1px solid var(--border);background:rgba(255,51,85,.1);color:var(--rd);font-size:11px;cursor:pointer">&#x2715; Limpiar filtros</button></div>'
+      : '')
     +paginScriptA
     +(total?
       '<div class="twrap">'
@@ -5258,7 +5414,29 @@ var _pgU_debounce=null;
 var _pgU_busqueda='';
 var _pgMon_pag=0;
 var _monTotalPag=1;
+var _monBusqueda='';
+var _monFZ='';
+var _monFC='';
 
+function filtrarMonitoreo(q){
+  clearTimeout(window._monDebounce);
+  _monBusqueda=(q||'').toLowerCase().trim();
+  _pgMon_pag=0;
+  window._monDebounce=setTimeout(function(){
+    pgMonitoreo(document.getElementById('main'));
+    var inp=document.getElementById('mon-q');
+    if(inp){inp.focus();var l=inp.value.length;inp.setSelectionRange(l,l);}
+  },250);
+}
+function limpiarMonBusqueda(){
+  _monBusqueda='';_pgMon_pag=0;
+  pgMonitoreo(document.getElementById('main'));
+  setTimeout(function(){var i=document.getElementById('mon-q');if(i)i.focus();},80);
+}
+function cambiarFiltroMon(fz,fc){
+  _monFZ=fz||''; _monFC=fc||''; _pgMon_pag=0;
+  pgMonitoreo(document.getElementById('main'));
+}
 function limpiarBusquedaU(){
   _pgU_busqueda='';_pgU_pag=0;
   pgUsuarios(document.getElementById('main'));
@@ -6121,10 +6299,10 @@ function closeDrawer(){
   // Timer: agente cerró ficha → pausa
   if(CU&&CU.role==='agent'){
     if(AGENTE_STATUS[CU.username]){
-      AGENTE_STATUS[CU.username].estado='pausa';
+      AGENTE_STATUS[CU.username].estado='sin_base';
       AGENTE_STATUS[CU.username].ficha=null;
       AGENTE_STATUS[CU.username].desde=Date.now();
-      iniciarTimer('pausa');
+      iniciarTimer('noProductivo');
     }
     goPage('mi-base');
   }
