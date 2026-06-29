@@ -2175,50 +2175,60 @@ function pgDashOp(M){
 
   // ── Datos por nivel ──
   var NORDEN=['INGLÉS I','INGLÉS II','INGLÉS III','INGLÉS IV','INGLÉS V','INGLÉS VI','INGLÉS VII','INGLÉS VIII','INGLÉS IX','Certificación'];
-  // Verificar que PS tiene datos
+  // Datos por nivel: t usa r.oi actual; ventas usan el producto gestionado (clave en PS)
   var _psCount=Object.keys(PS).length;
-  console.log('[DASH] PS keys:'+_psCount+' d.length:'+d.length+' nivData muestra');
   var nivData={};
+  // 1. Contar base actual por r.oi
   d.forEach(function(r){
     if(!r.oi) return;
     if(!nivData[r.oi]) nivData[r.oi]={t:0,gano:0,gest:0,pend:0,canc:0};
     nivData[r.oi].t++;
-    // Buscar el estado real en PS — el producto gestionado puede diferir de r.oi actual
-    var psM=PS[r.m]||{};
-    var _ganado=false,_pend=false,_gest=false,_canc=false;
+  });
+  // 2. Atribuir gestiones al nivel donde OCURRIERON (clave en PS)
+  Object.entries(PS).forEach(function(matKv){
+    var mat=parseInt(matKv[0]),psM=matKv[1];
     Object.entries(psM).forEach(function(kv){
       var prod=kv[0],est=kv[1];
-      // Solo productos de idioma (no cursos)
-      if(r.cur&&r.cur.indexOf(prod)>=0) return;
-      if(est.estado==='cerrado_ganado')  _ganado=true;
-      else if(est.estado==='pendiente_pago') _pend=true;
-      else if(est.estado==='descartado_todo'||est.estado==='descartado') _canc=true;
-      else if(est.tip||est.estado) _gest=true;
+      // Solo idiomas/certificación (excluir cursos)
+      var rr=_dbIdx?_dbIdx[mat]:null;
+      if(rr&&rr.cur&&rr.cur.indexOf(prod)>=0) return;
+      // El nivel destino: el producto gestionado si existe en NORDEN, sino r.oi actual
+      var nivelTarget=NORDEN.indexOf(prod)>=0||prod==='Certificación'?prod:(rr?rr.oi:null);
+      if(!nivelTarget) return;
+      if(!nivData[nivelTarget]) nivData[nivelTarget]={t:0,gano:0,gest:0,pend:0,canc:0};
+      if(est.estado==='cerrado_ganado')        nivData[nivelTarget].gano++;
+      else if(est.estado==='pendiente_pago')   nivData[nivelTarget].pend++;
+      else if(est.estado==='descartado_todo'||est.estado==='descartado') nivData[nivelTarget].canc++;
+      else if(est.tip||est.estado==='no_contesta'||est.estado==='callback'||est.estado==='contactado') nivData[nivelTarget].gest++;
     });
-    if(_ganado)       nivData[r.oi].gano++;
-    else if(_canc)    nivData[r.oi].canc++;
-    else if(_pend)    nivData[r.oi].pend++;
-    else if(_gest)    nivData[r.oi].gest++;
   });
   var nivList=NORDEN.filter(function(n){return nivData[n]&&nivData[n].t>0;});
 
   // ── Datos por curso ──
+  // Cursos: t usa r.cur actual; ventas usan el producto gestionado (clave en PS)
   var curData={};
-  var _curTotal=0;
+  // 1. Contar base actual por curso
   d.forEach(function(r){
-    if(r.cur&&r.cur.length) _curTotal++;
     (r.cur||[]).forEach(function(cu){
       if(!curData[cu]) curData[cu]={t:0,gano:0,gest:0,pend:0};
       curData[cu].t++;
-      var _opC=estadoOp(r.m, cu); // evaluar solo este curso
-      if(_opC==='ganado')        curData[cu].gano++;
-      else if(_opC==='pendpago') curData[cu].pend++;
-      else if(_opC==='gestionado'||_opC==='callback') curData[cu].gest++;
+    });
+  });
+  // 2. Atribuir gestiones al curso donde ocurrieron
+  Object.entries(PS).forEach(function(matKv){
+    var mat=parseInt(matKv[0]),psM=matKv[1];
+    var rr=_dbIdx?_dbIdx[mat]:null;
+    Object.entries(psM).forEach(function(kv){
+      var prod=kv[0],est=kv[1];
+      // Solo cursos
+      if(!rr||!rr.cur||rr.cur.indexOf(prod)<0) return;
+      if(!curData[prod]) return; // curso no está en base filtrada
+      if(est.estado==='cerrado_ganado')        curData[prod].gano++;
+      else if(est.estado==='pendiente_pago')   curData[prod].pend++;
+      else if(est.tip||est.estado==='no_contesta'||est.estado==='callback'||est.estado==='contactado') curData[prod].gest++;
     });
   });
   var curList=Object.keys(curData).sort(function(a,b){return curData[b].t-curData[a].t;}).slice(0,8);
-  console.log('[DASH] curTotal:'+_curTotal+' curList:'+curList.join(','));
-  console.log('[DASH] nivList:'+Object.keys(nivData).filter(function(n){return nivData[n]&&nivData[n].gano>0;}).join(','));
 
   // ── Alertas inteligentes ──
   var alertas=[];
@@ -3862,7 +3872,7 @@ function _abrirSiguienteProspecto(idx){
           matElegido=fData[ri].m;
           window._posActual=ri;
           if(cola) cola.pos=ri;
-          openFicha(matElegido);
+          openFicha(matElegido, window._ofertaActiva?window._ofertaActiva.valor:null);
           return;
         }
       }
@@ -3879,7 +3889,7 @@ function _abrirSiguienteProspecto(idx){
 
   window._posActual=posLibre;
   if(cola) cola.pos=posLibre;
-  openFicha(matElegido);
+  openFicha(matElegido, window._ofertaActiva?window._ofertaActiva.valor:null);
 }
 
 function saltarProspecto(mat){
