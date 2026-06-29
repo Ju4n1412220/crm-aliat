@@ -2175,6 +2175,9 @@ function pgDashOp(M){
 
   // ── Datos por nivel ──
   var NORDEN=['INGLÉS I','INGLÉS II','INGLÉS III','INGLÉS IV','INGLÉS V','INGLÉS VI','INGLÉS VII','INGLÉS VIII','INGLÉS IX','Certificación'];
+  // Verificar que PS tiene datos
+  var _psCount=Object.keys(PS).length;
+  console.log('[DASH] PS keys:'+_psCount+' d.length:'+d.length+' nivData muestra');
   var nivData={};
   d.forEach(function(r){
     if(!r.oi) return;
@@ -2201,7 +2204,9 @@ function pgDashOp(M){
 
   // ── Datos por curso ──
   var curData={};
+  var _curTotal=0;
   d.forEach(function(r){
+    if(r.cur&&r.cur.length) _curTotal++;
     (r.cur||[]).forEach(function(cu){
       if(!curData[cu]) curData[cu]={t:0,gano:0,gest:0,pend:0};
       curData[cu].t++;
@@ -2212,6 +2217,8 @@ function pgDashOp(M){
     });
   });
   var curList=Object.keys(curData).sort(function(a,b){return curData[b].t-curData[a].t;}).slice(0,8);
+  console.log('[DASH] curTotal:'+_curTotal+' curList:'+curList.join(','));
+  console.log('[DASH] nivList:'+Object.keys(nivData).filter(function(n){return nivData[n]&&nivData[n].gano>0;}).join(','));
 
   // ── Alertas inteligentes ──
   var alertas=[];
