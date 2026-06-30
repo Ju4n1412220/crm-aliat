@@ -2143,12 +2143,11 @@ function pgDashOp(M){
     var _hayGanado=false,_hayCanc=false,_hayPend=false,_hayCb=false,_hayGest=false;
     Object.entries(psM2).forEach(function(kv){
       var prod=kv[0],est2=kv[1];
-      // Si hay filtro de nivel, solo contar el producto filtrado
-      if(_fNiv && prod!==_fNiv) return;
-      // Si hay filtro de oferta cursos, solo cursos
-      if(_fOf==='cursos' && (!r.cur||r.cur.indexOf(prod)<0)) return;
-      if(_fOf==='certif' && prod!=='Certificación') return;
-      if(_fOf==='idioma' && (prod==='Certificación'||(r.cur&&r.cur.indexOf(prod)>=0))) return;
+      var esCurso2=r.cur&&r.cur.indexOf(prod)>=0, esCertif2=prod==='Certificación', esIdioma2=!esCurso2&&!esCertif2;
+      // d ya filtró por r.oi=_fNiv arriba; aquí solo distinguir tipo de producto
+      if(_fOf==='cursos' && !esCurso2) return;
+      if(_fOf==='certif' && !esCertif2) return;
+      if(_fOf==='idioma' && !esIdioma2) return;
       if(est2.estado==='cerrado_ganado') _hayGanado=true;
       else if(est2.estado==='descartado_todo'||est2.estado==='descartado') _hayCanc=true;
       else if(est2.estado==='pendiente_pago') _hayPend=true;
@@ -2164,12 +2163,18 @@ function pgDashOp(M){
     // Agente — iterar SOLO los productos que coinciden con el filtro activo
     Object.entries(PS[r.m]||{}).forEach(function(kv){
       var prod=kv[0],est=kv[1];
-      // Respetar filtro de nivel/curso/oferta seleccionado en el dashboard
-      if(_fNiv && prod!==_fNiv) return;
-      if(_fCur && prod!==_fCur) return;
-      if(_fOf==='cursos' && (!r.cur||r.cur.indexOf(prod)<0)) return;
-      if(_fOf==='certif' && prod!=='Certificación') return;
-      if(_fOf==='idioma' && (prod==='Certificación'||(r.cur&&r.cur.indexOf(prod)>=0))) return;
+      // d ya está filtrado por r.oi=_fNiv arriba; aquí solo distinguimos
+      // tipo de producto (idioma/certif/curso) sin exigir que la clave de PS
+      // coincida exactamente con el nivel actual (el agente pudo gestionar
+      // el producto cuando el prospecto tenía otro nivel calculado)
+      var esCurso = r.cur && r.cur.indexOf(prod) >= 0;
+      var esCertif = prod === 'Certificación';
+      var esIdioma = !esCurso && !esCertif;
+      if(_fCur && prod!==_fCur) return; // filtro de curso específico sí exige coincidencia exacta
+      if(_fOf==='cursos' && !esCurso) return;
+      if(_fOf==='certif' && !esCertif) return;
+      if(_fOf==='idioma' && !esIdioma) return;
+      // _fNiv ya filtró 'd' arriba — no se vuelve a filtrar por prod aquí
       var ag=est.agente;
       if(!ag||!agentStats[ag]) return;
       agentStats[ag].total++;
@@ -3322,10 +3327,11 @@ function pgDash(M){
     var _bGano=false,_bCanc=false,_bPend=false,_bGest=false;
     Object.entries(psB).forEach(function(kv){
       var prod=kv[0],est=kv[1];
-      if(_fNiv && prod!==_fNiv) return;
-      if(_fOf==='cursos' && (!r.cur||r.cur.indexOf(prod)<0)) return;
-      if(_fOf==='certif' && prod!=='Certificación') return;
-      if(_fOf==='idioma' && (prod==='Certificación'||(r.cur&&r.cur.indexOf(prod)>=0))) return;
+      var esCursoB=r.cur&&r.cur.indexOf(prod)>=0, esCertifB=prod==='Certificación', esIdiomaB=!esCursoB&&!esCertifB;
+      // dFilt ya filtró por r.oi=_fNiv arriba; aquí solo distinguir tipo de producto
+      if(_fOf==='cursos' && !esCursoB) return;
+      if(_fOf==='certif' && !esCertifB) return;
+      if(_fOf==='idioma' && !esIdiomaB) return;
       if(est.estado==='cerrado_ganado') _bGano=true;
       else if(est.estado==='descartado_todo'||est.estado==='descartado') _bCanc=true;
       else if(est.estado==='pendiente_pago') _bPend=true;
@@ -3351,10 +3357,11 @@ function pgDash(M){
     var _tGano=false,_tCanc=false,_tPend=false,_tGest=false;
     Object.entries(psT).forEach(function(kv){
       var prod=kv[0],est=kv[1];
-      if(_fNiv && prod!==_fNiv) return;
-      if(_fOf==='cursos' && (!r.cur||r.cur.indexOf(prod)<0)) return;
-      if(_fOf==='certif' && prod!=='Certificación') return;
-      if(_fOf==='idioma' && (prod==='Certificación'||(r.cur&&r.cur.indexOf(prod)>=0))) return;
+      var esCursoT=r.cur&&r.cur.indexOf(prod)>=0, esCertifT=prod==='Certificación', esIdiomaT=!esCursoT&&!esCertifT;
+      // dFilt ya filtró por r.oi=_fNiv arriba; aquí solo distinguir tipo de producto
+      if(_fOf==='cursos' && !esCursoT) return;
+      if(_fOf==='certif' && !esCertifT) return;
+      if(_fOf==='idioma' && !esIdiomaT) return;
       if(est.estado==='cerrado_ganado') _tGano=true;
       else if(est.estado==='descartado_todo'||est.estado==='descartado') _tCanc=true;
       else if(est.estado==='pendiente_pago') _tPend=true;
