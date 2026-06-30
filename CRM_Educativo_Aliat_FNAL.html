@@ -2111,10 +2111,16 @@ function pgDashOp(M){
   var d = dAll.filter(function(r){
     if(_fZ  && (CAMPUS_ZONA[r.c]||'Otra')!==_fZ)  return false;
     if(_fC  && r.c!==_fC)                           return false;
-    if(_fOf==='idioma')  { if(!r.oi||r.oi==='Certificación') return false; }
-    else if(_fOf==='certif')  { if(r.oi!=='Certificación') return false; }
-    else if(_fOf==='cursos')  { if(!r.cur||!r.cur.length)  return false; }
-    if(_fNiv && r.oi!==_fNiv)  return false;
+    // Si el usuario seleccionó explícitamente 'Certificación' en el dropdown de nivel,
+    // ese filtro tiene prioridad sobre el botón de Tipo de Oferta (Idioma)
+    if(_fNiv==='Certificación'){
+      if(r.oi!=='Certificación') return false;
+    } else {
+      if(_fOf==='idioma')  { if(!r.oi||r.oi==='Certificación') return false; }
+      else if(_fOf==='certif')  { if(r.oi!=='Certificación') return false; }
+      else if(_fOf==='cursos')  { if(!r.cur||!r.cur.length)  return false; }
+      if(_fNiv && r.oi!==_fNiv)  return false;
+    }
     if(_fCur && (!r.cur||r.cur.indexOf(_fCur)<0)) return false;
     return true;
   });
@@ -2318,8 +2324,6 @@ function pgDashOp(M){
 
   // nivBars y curBars reemplazados por cards inline
 
-  console.log('[DASH3] _fNiv:'+_fNiv+' _fOf:'+_fOf+' d.length:'+d.length);
-  console.log('[DASH3] agentStats:'+JSON.stringify(agentStats));
   // ── Top 8 agentes ──
   var topAgentes=Object.entries(agentStats)
     .filter(function(e){return e[1].total>0;})
@@ -3305,11 +3309,15 @@ function pgDash(M){
   var dFilt = d.filter(function(r){
     if(_fZ  && (CAMPUS_ZONA[r.c]||'Otra')!==_fZ)  return false;
     if(_fC  && r.c!==_fC)                           return false;
-    if(_fOf==='idioma')  { if(!r.oi||r.oi==='Certificación') return false; }
-    else if(_fOf==='certif')  { if(r.oi!=='Certificación') return false; }
-    else if(_fOf==='cursos')  { if(!r.cur||!r.cur.length) return false; }
-    // Subfiltros de nivel y curso
-    if(_fNiv && r.oi!==_fNiv) return false;
+    if(_fNiv==='Certificación'){
+      if(r.oi!=='Certificación') return false;
+    } else {
+      if(_fOf==='idioma')  { if(!r.oi||r.oi==='Certificación') return false; }
+      else if(_fOf==='certif')  { if(r.oi!=='Certificación') return false; }
+      else if(_fOf==='cursos')  { if(!r.cur||!r.cur.length) return false; }
+      // Subfiltros de nivel y curso
+      if(_fNiv && r.oi!==_fNiv) return false;
+    }
     if(_fCur && (!r.cur||r.cur.indexOf(_fCur)<0)) return false;
     return true;
   });
