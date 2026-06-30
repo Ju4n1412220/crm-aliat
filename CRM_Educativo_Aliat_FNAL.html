@@ -2318,6 +2318,8 @@ function pgDashOp(M){
 
   // nivBars y curBars reemplazados por cards inline
 
+  console.log('[DASH3] _fNiv:'+_fNiv+' _fOf:'+_fOf+' d.length:'+d.length);
+  console.log('[DASH3] agentStats:'+JSON.stringify(agentStats));
   // ── Top 8 agentes ──
   var topAgentes=Object.entries(agentStats)
     .filter(function(e){return e[1].total>0;})
