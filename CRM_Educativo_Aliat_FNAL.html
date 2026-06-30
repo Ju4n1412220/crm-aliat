@@ -989,6 +989,7 @@ async function fbDownloadDB(onProgress){
     DB.ins = allRows.filter(function(r){ return r.tp === 'I'; });
     DB.egr = allRows.filter(function(r){ return r.tp === 'E'; });
     DB._fbVersion = meta.version;
+    _dbIdx = null; // invalidar índice — se reconstruirá en el próximo uso
 
     console.log('[FB] DB descargada: '+fmt(allRows.length)+' prospectos');
     return true;
@@ -1448,6 +1449,7 @@ if(_bc) _bc.onmessage=function(ev){
     case 'db_update':
       if(msg.ins) DB.ins=msg.ins;
       if(msg.egr) DB.egr=msg.egr;
+      _dbIdx=null;
       if(CU&&CU.role==='agent') refreshState();
       break;
     case 'ps_update':
@@ -1539,7 +1541,7 @@ function dbLoad(){
       return;
     }
     var s=localStorage.getItem('crm_db');
-    if(s){ var d=JSON.parse(s); DB.ins=d.ins||[]; DB.egr=d.egr||[]; }
+    if(s){ var d=JSON.parse(s); DB.ins=d.ins||[]; DB.egr=d.egr||[]; _dbIdx=null; }
   }catch(e){ console.warn('[CRM] dbLoad fallback:', e.message); }
 }
 
@@ -1817,6 +1819,7 @@ function _continuarLogin(ud,u){
       var d=JSON.parse(sdb);
       if(d.ins&&d.ins.length){ DB.ins=d.ins; }
       if(d.egr&&d.egr.length){ DB.egr=d.egr; }
+      _dbIdx=null;
       window._colas={};
       console.log('[CRM] DB cargada al login: ins='+DB.ins.length+', egr='+DB.egr.length);
     }
@@ -2067,6 +2070,7 @@ function limpiarFiltrosDash(){
 function pgDashOp(M){
   if(!M) return;
   if(CU.role==='agent'){notif('Acceso no autorizado','err');return;}
+  if(!_dbIdx) _buildDbIdx(); // asegurar índice antes de usar _dbIdx[mat]
   // Guard DB vacía
   if(all().length===0){
     M.innerHTML='<div style="padding:2rem;text-align:center;color:var(--tx3)">'
@@ -2202,33 +2206,38 @@ function pgDashOp(M){
       else if(est.tip||est.estado==='no_contesta'||est.estado==='callback'||est.estado==='contactado') nivData[nivelTarget].gest++;
     });
   });
-  var nivList=NORDEN.filter(function(n){return nivData[n]&&nivData[n].t>0;});
+  var nivList=NORDEN.filter(function(n){return nivData[n]&&(nivData[n].t>0||nivData[n].gano>0||nivData[n].pend>0||nivData[n].gest>0);});
 
   // ── Datos por curso ──
-  // Cursos: t usa r.cur actual; ventas usan el producto gestionado (clave en PS)
+  // Cursos: t usa r.cur actual (base filtrada); ventas se buscan en TODA la PS
+  // sin depender de que el prospecto siga en 'd' (igual criterio que nivData)
   var curData={};
-  // 1. Contar base actual por curso
+  // 1. Contar base actual por curso (respeta filtros de zona/campus activos)
   d.forEach(function(r){
     (r.cur||[]).forEach(function(cu){
       if(!curData[cu]) curData[cu]={t:0,gano:0,gest:0,pend:0};
       curData[cu].t++;
     });
   });
-  // 2. Atribuir gestiones al curso donde ocurrieron
+  // 2. Atribuir gestiones al curso donde ocurrieron — buscar en TODA la base (dAll)
+  // para no perder ventas de prospectos que el filtro de zona/campus excluya
+  var _curSet={}; dAll.forEach(function(r){(r.cur||[]).forEach(function(cu){_curSet[cu]=1;});});
   Object.entries(PS).forEach(function(matKv){
     var mat=parseInt(matKv[0]),psM=matKv[1];
     var rr=_dbIdx?_dbIdx[mat]:null;
+    if(!rr) return;
     Object.entries(psM).forEach(function(kv){
       var prod=kv[0],est=kv[1];
-      // Solo cursos
-      if(!rr||!rr.cur||rr.cur.indexOf(prod)<0) return;
-      if(!curData[prod]) return; // curso no está en base filtrada
+      // Solo cursos válidos del catálogo actual
+      if(!_curSet[prod]) return;
+      if(!rr.cur||rr.cur.indexOf(prod)<0) return;
+      if(!curData[prod]) curData[prod]={t:0,gano:0,gest:0,pend:0};
       if(est.estado==='cerrado_ganado')        curData[prod].gano++;
       else if(est.estado==='pendiente_pago')   curData[prod].pend++;
       else if(est.tip||est.estado==='no_contesta'||est.estado==='callback'||est.estado==='contactado') curData[prod].gest++;
     });
   });
-  var curList=Object.keys(curData).sort(function(a,b){return curData[b].t-curData[a].t;}).slice(0,8);
+  var curList=Object.keys(curData).sort(function(a,b){return curData[b].t-curData[a].t;});
 
   // ── Alertas inteligentes ──
   var alertas=[];
@@ -3202,6 +3211,7 @@ function pgMonitoreo(M,pag){
 
 function pgDash(M){
   if(!M) return;
+  if(!_dbIdx) _buildDbIdx(); // asegurar índice actualizado
   // Si DB no cargada, mostrar mensaje
   if(all().length===0){
     M.innerHTML='<div style="padding:2rem;text-align:center;color:var(--tx3)">'
@@ -5722,6 +5732,7 @@ function activarCarga(k){
 function doDepurar(k){
   if(!confirm('¿Depurar '+(k==='ins'?'inscritos':'egresados')+'?'))return;
   if(k==='ins')DB.ins=[];else DB.egr=[];
+  _dbIdx=null;
   var st=document.getElementById('st-'+k);
   if(st){st.textContent='Depurado — listo para nueva carga';st.className='ust ust-ok';}
   refreshState();
@@ -5906,6 +5917,7 @@ function handleCSV(e,k){
         if(!nr.length){setSt('Sin matriculas validas',false);return;}
         var mr=mergeRows(DB.ins,aplicarMotor(nr),'m');
         DB.ins=mr.rows;
+        _dbIdx=null;
         msg='+'+fmt(mr.added)+' nuevos, '+fmt(mr.updated)+' actualizados. Total: '+fmt(DB.ins.length);
       } else {
         var nr=rows.filter(function(r){return r['Campus Real']&&r['Campus Real']!=='#N/D'&&r['Matrícula'];}).map(function(r){
