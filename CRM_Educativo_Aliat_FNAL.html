@@ -2161,8 +2161,15 @@ function pgDashOp(M){
     else if(_hayCb)      callbacks++;
     else if(_hayGest)    enSeguim++;
     else                 libres++;
-    // Agente — iterar productos de este prospecto
-    Object.values(PS[r.m]||{}).forEach(function(est){
+    // Agente — iterar SOLO los productos que coinciden con el filtro activo
+    Object.entries(PS[r.m]||{}).forEach(function(kv){
+      var prod=kv[0],est=kv[1];
+      // Respetar filtro de nivel/curso/oferta seleccionado en el dashboard
+      if(_fNiv && prod!==_fNiv) return;
+      if(_fCur && prod!==_fCur) return;
+      if(_fOf==='cursos' && (!r.cur||r.cur.indexOf(prod)<0)) return;
+      if(_fOf==='certif' && prod!=='Certificación') return;
+      if(_fOf==='idioma' && (prod==='Certificación'||(r.cur&&r.cur.indexOf(prod)>=0))) return;
       var ag=est.agente;
       if(!ag||!agentStats[ag]) return;
       agentStats[ag].total++;
@@ -2207,6 +2214,10 @@ function pgDashOp(M){
     });
   });
   var nivList=NORDEN.filter(function(n){return nivData[n]&&(nivData[n].t>0||nivData[n].gano>0||nivData[n].pend>0||nivData[n].gest>0);});
+  console.log('[DASH2] _dbIdx existe:'+(!!_dbIdx)+' keys:'+(_dbIdx?Object.keys(_dbIdx).length:0));
+  console.log('[DASH2] PS total keys:'+Object.keys(PS).length);
+  console.log('[DASH2] nivData:'+JSON.stringify(nivData));
+  console.log('[DASH2] nivList:'+nivList.join(','));
 
   // ── Datos por curso ──
   // Cursos: t usa r.cur actual (base filtrada); ventas se buscan en TODA la PS
@@ -2238,6 +2249,9 @@ function pgDashOp(M){
     });
   });
   var curList=Object.keys(curData).sort(function(a,b){return curData[b].t-curData[a].t;});
+  console.log('[DASH2] curData:'+JSON.stringify(curData));
+  console.log('[DASH2] curList:'+curList.join(','));
+  console.log('[DASH2] _curSet:'+Object.keys(_curSet).join(','));
 
   // ── Alertas inteligentes ──
   var alertas=[];
