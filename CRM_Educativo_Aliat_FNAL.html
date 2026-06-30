@@ -2358,8 +2358,8 @@ function pgDashOp(M){
   // ── Filtros UI (reutilizados de Resumen Base) ──
   var campusPool=Object.keys((function(){var bc={};dAll.forEach(function(r){if(r.c)bc[r.c]=1;});return bc;})())
     .filter(function(cp){return !_fZ||(CAMPUS_ZONA[cp]||'Otra')===_fZ;}).sort();
-  var nivPool=Object.keys((function(){var nv={};dAll.forEach(function(r){if(r.oi)nv[r.oi]=1;});return nv;})());
   var NORDEN2=['INGLÉS I','INGLÉS II','INGLÉS III','INGLÉS IV','INGLÉS V','INGLÉS VI','INGLÉS VII','INGLÉS VIII','INGLÉS IX','Certificación'];
+  var nivPool=NORDEN2; // catálogo completo — permite filtrar aunque no haya prospectos actuales en ese nivel
   var nivOpts='<option value="">Todos los niveles</option>'+NORDEN2.filter(function(n){return nivPool.indexOf(n)>=0;}).map(function(n){return '<option value="'+n+'"'+(_fNiv===n?' selected':'')+'>'+n+'</option>';}).join('');
   var curPool=(function(){var cu={};dAll.forEach(function(r){(r.cur||[]).forEach(function(c){cu[c]=1;});});return Object.keys(cu).sort();})();
   var curOpts='<option value="">Todos los cursos</option>'+curPool.map(function(cu){return '<option value="'+cu+'"'+(_fCur===cu?' selected':'')+'>'+cu+'</option>';}).join('');
@@ -5866,7 +5866,11 @@ function aplicarMotor(rows){
     // Calcular cursos disponibles según la carrera del prospecto
     r.cur = [];
     if(CURSOS_CAT && CURSOS_CAT.length){
-      var cn = (r.p||'').toLowerCase().trim();
+      // Normaliza acentos/diacríticos para que 'Psicologia' y 'Psicología' coincidan
+      function _normAcentos(s){
+        return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      }
+      var cn = _normAcentos((r.p||'').toLowerCase().trim());
       // Limpiar código de carrera: 'LAE42 Administración de Empresas C' → 'administración de empresas'
       // El código tiene 3-8 chars alfanuméricos + espacio al inicio
       var cnLimpio = cn.replace(/^[a-z0-9]{2,8}[0-9]{2,4}\s+/,'')  // quitar código tipo 'LAE42 '
@@ -5874,7 +5878,7 @@ function aplicarMotor(rows){
                        .replace(/\s+[a-z]{1}$/,'').trim();            // quitar sufijo de 1 letra
 
       CURSOS_CAT.forEach(function(cat){
-        var cc = (cat.carrera||'').toLowerCase().trim();
+        var cc = _normAcentos((cat.carrera||'').toLowerCase().trim());
         if(!cc) return;
         // Cursos para TODAS las carreras
         if(cc === 'todas'){
