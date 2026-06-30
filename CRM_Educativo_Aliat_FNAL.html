@@ -2214,10 +2214,6 @@ function pgDashOp(M){
     });
   });
   var nivList=NORDEN.filter(function(n){return nivData[n]&&(nivData[n].t>0||nivData[n].gano>0||nivData[n].pend>0||nivData[n].gest>0);});
-  console.log('[DASH2] _dbIdx existe:'+(!!_dbIdx)+' keys:'+(_dbIdx?Object.keys(_dbIdx).length:0));
-  console.log('[DASH2] PS total keys:'+Object.keys(PS).length);
-  console.log('[DASH2] nivData:'+JSON.stringify(nivData));
-  console.log('[DASH2] nivList:'+nivList.join(','));
 
   // ── Datos por curso ──
   // Cursos: t usa r.cur actual (base filtrada); ventas se buscan en TODA la PS
@@ -2249,9 +2245,6 @@ function pgDashOp(M){
     });
   });
   var curList=Object.keys(curData).sort(function(a,b){return curData[b].t-curData[a].t;});
-  console.log('[DASH2] curData:'+JSON.stringify(curData));
-  console.log('[DASH2] curList:'+curList.join(','));
-  console.log('[DASH2] _curSet:'+Object.keys(_curSet).join(','));
 
   // ── Alertas inteligentes ──
   var alertas=[];
@@ -2475,7 +2468,7 @@ function pgDashOp(M){
       // Cards de niveles
       var nivCards=nivList.length?nivList.map(function(n){
         var v=nivData[n];
-        var pGano=v.t>0?((v.gano/v.t)*100).toFixed(0):0;
+        var pGano=v.t>0?((v.gano/v.t)*100).toFixed(1):'0.0';
         var pPend=v.t>0?((v.pend/v.t)*100).toFixed(0):0;
         var pCanc=v.t>0?((v.canc/v.t)*100).toFixed(0):0;
         var pLib =v.t>0?(((v.t-v.gano-v.pend-v.gest-v.canc)/v.t)*100).toFixed(0):0;
@@ -2507,7 +2500,7 @@ function pgDashOp(M){
       // Cards de cursos
       var curCards=curList.length?curList.map(function(cu){
         var v=curData[cu];
-        var pGano=v.t>0?((v.gano/v.t)*100).toFixed(0):0;
+        var pGano=v.t>0?((v.gano/v.t)*100).toFixed(1):'0.0';
         var pPend=v.t>0?((v.pend/v.t)*100).toFixed(0):0;
         var conv=parseFloat(pGano);
         var convCol=conv>=20?'var(--gn)':conv>=10?'var(--o1)':conv>0?'var(--c1)':'var(--tx3)';
